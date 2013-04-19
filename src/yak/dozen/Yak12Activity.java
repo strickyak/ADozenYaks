@@ -15,6 +15,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
+import yak.etc.Yak;
+
 import android.net.Uri;
 import android.os.Bundle;
 import android.app.Activity;
@@ -42,6 +44,10 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout.LayoutParams;
 
 public class Yak12Activity extends Activity {
+	
+
+	Context mainContext;
+	ServerAccess access = new ServerAccess("http://192.168.8.252:9999/?");
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -89,8 +95,6 @@ public class Yak12Activity extends Activity {
       "83655D23DCA3AD961C62F356208552BB9ED529077096966D" +
       "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF";
 
-	Context mainContext;
-	Store store = new Store("http://yak.net:30332/");
 
 
 	////////////////////////////////////////
@@ -99,35 +103,43 @@ public class Yak12Activity extends Activity {
 
 	private void display(String path, String query, Bundle extras,
 			Bundle savedInstanceState) {
-		Log.i("antti", "PATH=" + path);
-		String[] words = path.split("/");
-		Log.i("antti", "words.LEN=" + words.length);
-		String verb = "";
-		if (words.length > 1) {
-			verb = words[1];
-		}
+		try {
+			Log.i("antti", "PATH=" + path);
+			String[] words = path.split("/");
+			Log.i("antti", "words.LEN=" + words.length);
+			String verb = "";
+			if (words.length > 1) {
+				verb = words[1];
+			}
 
-		Log.i("antti", "=============== VERB =" + verb);
-		if (verb.equals("list")) {
-			String[] labels = extras.getString("items").split(";");
-			displayList(labels);
-		} else if (verb.equals("channel")) {
-			displayChannel(words[2]);
-		} else if (verb.equals("create")) {
-			displayCreateInode();
-		} else if (verb.equals("rendez")) {
-			displayRendezvous(words[2]);
-		} else if (verb.equals("dhdemo")) {
-			displayDHDemo();
-		} else if (verb.equals("web")) {
-			displayWeb((String)extras.get("html"));
-		} else {
-			displayDefault();
+			Log.i("antti", "=============== VERB =" + verb);
+			if (verb.equals("list")) {
+				String[] labels = extras.getString("items").split(";");
+				displayList(labels);
+//				 } else if (verb.equals("channel")) {
+//				 displayChannel(words[2]);
+//				 } else if (verb.equals("create")) {
+//				 displayCreateInode();
+			} else if (verb.equals("rendez")) {
+				displayRendezvous(words[2]);
+			} else if (verb.equals("dhdemo")) {
+				displayDHDemo();
+			} else if (verb.equals("web")) {
+				displayWeb((String) extras.get("html"));
+			} else if (verb.equals("Channel777")) {
+				displayChannel777();
+			} else {
+				displayDefault();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			displayWeb(Yak.htmlEscape(e.toString()));
 		}
 	}
 
 	private void displayDefault() {
-		String[] numbers = new String[] {"One", "Two", "Three", "Channel", "Rendezvous", "dhdemo"};
+		String[] numbers = new String[] {"One", "Two", "Three", "Channel", "Rendezvous", "dhdemo",
+				"Channel777"};
 		DemoListView v = new DemoListView(mainContext, numbers);
 		setContentView(v);
 	}
@@ -136,84 +148,88 @@ public class Yak12Activity extends Activity {
 		DemoWebView v = new DemoWebView(mainContext, html);
 		setContentView(v);
 	}
-	
-	private void displayChannel(String chanKey) {
-		StringBuilder sb = new StringBuilder();
-		String[] inodes = null;
-		try {
-			inodes = this.store.fetchInodes(chanKey);
-		} catch (ClientProtocolException e) {
-			Log.i("antti", e.getMessage());
-		} catch (IOException e) {
-			Log.i("antti", e.getMessage());
-		}
-		sb.append(this.renderInodes(inodes));
-		sb.append("<p><a href=\"/create\">Create</a></p>");
-		
-		DemoWebView v = new DemoWebView(mainContext, sb.toString());
-		setContentView(v);
+
+	private void displayChannel777() throws ClientProtocolException, IOException {
+		String html = access.displayChannel777();
+		displayWeb(html);
 	}
-	
-	private String renderInodes(String[] inodes) {
-		StringBuilder sb = new StringBuilder();
-		for (String inode : inodes) {
-			sb.append("<p>");
-			sb.append(inode);
-			sb.append("</p>");
-		}
-		return sb.toString();
-	}
+//		private void displayChannel(String chanKey) {
+//		StringBuilder sb = new StringBuilder();
+//		String[] inodes = null;
+//		try {
+//			inodes = this.access.fetchInodes(chanKey);
+//		} catch (ClientProtocolException e) {
+//			Log.i("antti", e.getMessage());
+//		} catch (IOException e) {
+//			Log.i("antti", e.getMessage());
+//		}
+//		sb.append(this.renderInodes(inodes));
+//		sb.append("<p><a href=\"/create\">Create</a></p>");
+//		
+//		DemoWebView v = new DemoWebView(mainContext, sb.toString());
+//		setContentView(v);
+//	}
+//	
+//	private String renderInodes(String[] inodes) {
+//		StringBuilder sb = new StringBuilder();
+//		for (String inode : inodes) {
+//			sb.append("<p>");
+//			sb.append(inode);
+//			sb.append("</p>");
+//		}
+//		return sb.toString();
+//	}
 
-	public void displayCreateInode() {
-		final EditText ed = new EditText(this);
-
-		ed.setInputType(InputType.TYPE_CLASS_TEXT
-				| InputType.TYPE_TEXT_FLAG_MULTI_LINE
-				| InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE
-				| InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-		
-		final LayoutParams widgetParams = new LayoutParams(
-				ViewGroup.LayoutParams.FILL_PARENT,
-				ViewGroup.LayoutParams.FILL_PARENT, 1.0f);
-		
-		ed.setLayoutParams(widgetParams);
-		ed.setTextAppearance(this, R.style.teletype);
-		ed.setBackgroundColor(Color.BLACK);
-		ed.setGravity(Gravity.TOP);
-		ed.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_INSET);
-		ed.setVerticalFadingEdgeEnabled(true);
-		ed.setVerticalScrollBarEnabled(true);
-		ed.setOnKeyListener(new OnKeyListener() {
-			public boolean onKey(View v, int keyCode, KeyEvent event) {
-				// If the event is a key-down event on the "enter"
-				// button
-				// if ((event.getAction() == KeyEvent.ACTION_DOWN)
-				// &&
-				// (keyCode == KeyEvent.KEYCODE_ENTER)) {
-				// // Perform action on key press
-				// Toast.makeText(TerseActivity.this, ed.getText(),
-				// Toast.LENGTH_SHORT).show();
-				// return true;
-				// }
-				return false;
-			}
-		});
-
-		Button btn = new Button(this);
-		btn.setText("Send");
-		btn.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {
-				
-				return;
-			}
-		});
-
-		LinearLayout linear = new LinearLayout(this);
-		linear.setOrientation(LinearLayout.VERTICAL);
-		linear.addView(btn);
-		linear.addView(ed);
-		setContentView(linear);
-	}
+//	public void displayCreateInode() {
+//		final EditText ed = new EditText(this);
+//
+//		ed.setInputType(InputType.TYPE_CLASS_TEXT
+//				| InputType.TYPE_TEXT_FLAG_MULTI_LINE
+//				| InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE
+//				| InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+//		
+//		final LayoutParams widgetParams = new LayoutParams(
+//				ViewGroup.LayoutParams.FILL_PARENT,
+//				ViewGroup.LayoutParams.FILL_PARENT, 1.0f);
+//		
+//		ed.setLayoutParams(widgetParams);
+//		ed.setTextAppearance(this, R.style.teletype);
+//		ed.setBackgroundColor(Color.BLACK);
+//		ed.setGravity(Gravity.TOP);
+//		ed.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_INSET);
+//		ed.setVerticalFadingEdgeEnabled(true);
+//		ed.setVerticalScrollBarEnabled(true);
+//		ed.setOnKeyListener(new OnKeyListener() {
+//			public boolean onKey(View v, int keyCode, KeyEvent event) {
+//				// If the event is a key-down event on the "enter"
+//				// button
+//				// if ((event.getAction() == KeyEvent.ACTION_DOWN)
+//				// &&
+//				// (keyCode == KeyEvent.KEYCODE_ENTER)) {
+//				// // Perform action on key press
+//				// Toast.makeText(TerseActivity.this, ed.getText(),
+//				// Toast.LENGTH_SHORT).show();
+//				// return true;
+//				// }
+//				return false;
+//			}
+//		});
+//
+//		Button btn = new Button(this);
+//		btn.setText("Send");
+//		btn.setOnClickListener(new OnClickListener() {
+//			public void onClick(View v) {
+//				
+//				return;
+//			}
+//		});
+//
+//		LinearLayout linear = new LinearLayout(this);
+//		linear.setOrientation(LinearLayout.VERTICAL);
+//		linear.addView(btn);
+//		linear.addView(ed);
+//		setContentView(linear);
+//	}
 	
 	public void displayRendezvous(String myId) {
 		DemoWebView v = new DemoWebView(mainContext, "");
@@ -252,44 +268,48 @@ public class Yak12Activity extends Activity {
 	}
 	
 	// Provides access to the storage.
-	public class Store {
+	public class ServerAccess {
 		
 		String baseUrl;
 		
-		public Store(String baseUrl) {
+		public ServerAccess(String baseUrl) {
 			this.baseUrl = baseUrl;
 		}
 		
-		// Fetch the inodes from storage.
-		public String[] fetchInodes(String chanKey) throws ClientProtocolException, IOException {
-			String scanUrl = this.baseUrl + "?f=scan&u=0&c=" + chanKey;
-			String scan = null;
-			
-			Log.i("antti", "~~~Store Scan Url: " + scanUrl);
-			scan = this.getUrl(scanUrl);
-			Log.i("antti", "~~~Store Scan Reply: " + scan);
-			
-			String[] inodeKeys = scan.split("\n");
-			int n = inodeKeys.length;
-			String[] inodes = new String[n];
-			
-			Log.i("antti", "~~~Store found " + n + " number of inode keys to fetch.");
-			for (int i = 0; i < n; i++) {
-				String fetchUrl = this.baseUrl + "?f=fetch&u=0&c=" + chanKey + "&i=" + inodeKeys[i];
-				
-				Log.i("antti", "~~~Store Fetch Url: " + fetchUrl);
-				inodes[i] = this.getUrl(fetchUrl);
-				Log.i("antti", "~~~Store Fetch Reply: " + inodes[i]);
-			}
-			
-			return inodes;
+//		// Fetch the inodes from storage.
+//		public String[] fetchInodes(String chanKey) throws ClientProtocolException, IOException {
+//			String scanUrl = this.baseUrl + "?f=&u=0&c=" + chanKey;
+//			String scan = null;
+//			
+//			Log.i("antti", "~~~Store Scan Url: " + scanUrl);
+//			scan = this.getUrl(scanUrl);
+//			Log.i("antti", "~~~Store Scan Reply: " + scan);
+//			
+//			String[] inodeKeys = scan.split("\n");
+//			int n = inodeKeys.length;
+//			String[] inodes = new String[n];
+//			
+//			Log.i("antti", "~~~Store found " + n + " number of inode keys to fetch.");
+//			for (int i = 0; i < n; i++) {
+//				String fetchUrl = this.baseUrl + "?f=fetch&u=0&c=" + chanKey + "&i=" + inodeKeys[i];
+//				
+//				Log.i("antti", "~~~Store Fetch Url: " + fetchUrl);
+//				inodes[i] = this.getUrl(fetchUrl);
+//				Log.i("antti", "~~~Store Fetch Reply: " + inodes[i]);
+//			}
+//			
+//			return inodes;
+//		}
+//		
+//		private void createInode(String chanKey, String inode, String value, String user) throws ClientProtocolException, IOException {
+//			String createUrl = this.baseUrl + "?f=create&u=0&c=" + chanKey + "&i=" + inode + "&value=" + value + "&u=" + user;
+//			getUrl(createUrl);
+//		}
+
+		public String displayChannel777() throws ClientProtocolException, IOException {
+			return getUrl(baseUrl + "f=chan&c=777");
 		}
-		
-		private void createInode(String chanKey, String inode, String value, String user) throws ClientProtocolException, IOException {
-			String createUrl = this.baseUrl + "?f=create&u=0&c=" + chanKey + "&i=" + inode + "&value=" + value + "&u=" + user;
-			getUrl(createUrl);
-		}
-		
+
 		private String getUrl(String url) throws ClientProtocolException, IOException {
 			HttpClient httpclient = new DefaultHttpClient();
 		    HttpResponse response = httpclient.execute(new HttpGet(url));
@@ -361,6 +381,8 @@ public class Yak12Activity extends Activity {
 				startChannel("555");
 			} else if (label == "dhdemo") {
 				startDHDemo();
+			} else if (label == "Channel777") {
+				startChannel777();
 			} else if (label == "Rendezvous") {
 				SecureRandom random = null;
 				try {
@@ -446,6 +468,10 @@ public class Yak12Activity extends Activity {
 	
 	void startDHDemo() {
 		startMain("/dhdemo", null);
+	}
+	
+	void startChannel777() {
+		startMain("/Channel777", null);
 	}
 
 	void startMain(String actPath, String actQuery, String... extrasKV) {

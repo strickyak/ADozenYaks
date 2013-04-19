@@ -25,9 +25,13 @@ public class AppServer extends BaseServer {
 			
 			// Run TheSerer in main thread.
 			new AppServer(9999).run();
+			Thread.sleep(1 * 1000); // millis
 			ReadUrl("http://localhost:9998/?f=boot");
 		} catch (IOException e) {
 			System.err.println("CAUGHT: " + e);
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -67,7 +71,7 @@ public class AppServer extends BaseServer {
 					"text/plain");
 		}
 
-		return new Response(z, 200, "text/plain");
+		return new Response(z, 200, "text/html");
 	}
 
 	private String doVerbBoot() throws IOException {
@@ -76,10 +80,17 @@ public class AppServer extends BaseServer {
 
 	private String doVerbChan(String channel) throws IOException {
 		String[] tnodes = UseStore("list", "c=" + channel).split("\n");
-		return "TODO -- WORK HERE";
+		String z = fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
+		z += "<br><dl>\n";
+		for (String t : tnodes) {
+			z += "<dt><b>" + t + "</b><br>\n";
+			z += "<dd><pre>\n" + UseStore("fetch", fmt("c=%s&t=%s", channel, t)) + "\n</pre>\n";
+		}
+		z += "</dl><p> OK.";
+		return z;
 	}
 	
 	public String UseStore(String verb, String args) throws IOException {
-		return ReadUrl("http;//localhost:9998/?f=" + verb + "&" + args);
+		return ReadUrl("http://localhost:9998/?f=" + verb + "&" + args);
 	}
 }

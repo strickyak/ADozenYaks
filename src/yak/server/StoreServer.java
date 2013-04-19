@@ -44,6 +44,8 @@ public class StoreServer extends BaseServer {
 				z = doVerbList(channel, latest);
 			} else if (verb.equals("create")) {
 				z = doVerbCreate(channel, tnode, value, user);
+			} else if (verb.equals("boot")) {
+				z = doVerbBoot();
 			} else {
 				throw new IllegalArgumentException("Bad verb: " + verb);
 			}
@@ -101,11 +103,13 @@ public class StoreServer extends BaseServer {
 		return "OK";
 	}
 	
-	public void doVerbBoot() throws IOException {
-		doVerbCreate("777", "101", "first", "nobody");
-		doVerbCreate("777", "102", "second", "nobody");
-		doVerbCreate("777", "103", "third", "nobody");
-		doVerbCreate("888", "104", "fourth", "nobody");
-		doVerbCreate("888", "105", "fifth", "nobody");
+	public String doVerbBoot() throws IOException {
+		String z = "BOOTING: ";
+		z += " # " + doVerbCreate("777", "101", "first", "nobody");
+		z += " # " + doVerbCreate("777", "102", "second", "nobody");
+		z += " # " + doVerbCreate("777", "103", "third", "nobody");
+		z += " # " + doVerbCreate("888", "104", "fourth", "nobody");
+		z += " # " + doVerbCreate("888", "105", "fifth", "nobody");
+		return z + "\n\n... BOOTED.";
 	}
 }

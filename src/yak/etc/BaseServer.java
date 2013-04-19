@@ -110,7 +110,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 			String contentLenStr = headers.get("content-length");
 			contentLength = 0;
 
-			if (contentType.trim().toLowerCase()
+			if (contentType != null && contentType.trim().toLowerCase()
 					.equals("application/x-www-form-urlencoded")) {
 				contentLength = Integer.parseInt(contentLenStr.trim());
 			}

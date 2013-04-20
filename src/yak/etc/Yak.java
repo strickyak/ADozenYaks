@@ -265,5 +265,11 @@ public abstract class Yak {
 			return z;
 		}
 	}
+	
+	public class Bad extends RuntimeException {
+		public Bad(String msg, String... args) {
+			super(fmt(msg, args));
+		}
+	}
 
 }

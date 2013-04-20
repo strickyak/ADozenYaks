@@ -18,7 +18,9 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import yak.etc.Yak;
 
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -300,6 +302,7 @@ public class Yak12Activity extends Activity {
 
 	public abstract class AWebView extends WebView {
 
+		@TargetApi(Build.VERSION_CODES.ECLAIR_MR1)
 		public AWebView(Context context, String html) {
 			super(context);
 

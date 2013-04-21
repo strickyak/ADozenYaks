@@ -10,26 +10,69 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
 public abstract class Yak {
+	
+	public static byte[] LongToBlock16(long a) {
+		byte[] z = new byte[16];
+		z[0] = (byte)a;
+		z[1] = (byte)(a >>> 8);
+		z[2] = (byte)(a >>> 16);
+		z[3] = (byte)(a >>> 24);
+		z[4] = (byte)(a >>> 32);
+		z[5] = (byte)(a >>> 40);
+		z[6] = (byte)(a >>> 48);
+		z[7] = (byte)(a >>> 56);
+		return z;
+	}
 
 	public static int ValueOfHexChar(char c) {
 		if ('0' <= c && c <= '9') {
 			return c - '0';
 		}
-		if ('A' <= c && c <= 'F') {
-			return c - 'A' + 10;
-		}
 		if ('a' <= c && c <= 'f') {
 			return c - 'a' + 10;
+		}
+		if ('A' <= c && c <= 'F') {
+			return c - 'A' + 10;
 		}
 		throw new IllegalArgumentException();
 	}
 
+	/** Bytes of String, allowing only 8-bit (Latin1) chars */
+	public byte[] StringToBytes(String a) {
+		// return a.getBytes("iso-8859-1");
+		final int n = a.length();
+		byte[] bytes = new byte[2*n];
+		for (int i=0; i<n; i++) {
+			char c = a.charAt(i);
+			byte b = (byte) c;
+			if (b != c) {
+				throw Bad("Bad char in ToBytes(): %d", c);
+			}
+			bytes[i] = b;
+		}
+		return bytes;
+	}
+	
+	public static String BytesToString(byte[] bytes) {
+		final int n = bytes.length;
+		char[] chars = new char[n];
+		for (int i=0; i<n; i++) {
+			chars[i] = (char) bytes[i];
+		}
+		return String.valueOf(chars);
+	}
+	
+	public static String CharsToString(char[] chars) {
+		return String.valueOf(chars);
+	}
+	
 	public static String UrlDecode(String s) {
 		StringBuffer sb = new StringBuffer();
 		final int n = s.length();
@@ -73,6 +116,33 @@ public abstract class Yak {
 			}
 		}
 		return sb.toString();
+	}
+	
+	public static char[] HexChars = {
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
+	};
+	
+	public static String HexEncode(byte[] bytes) {
+		final int n = bytes.length;
+		char[] chars = new char[2*n];
+		for (int i = 0; i < n; i++) {
+			final byte b = bytes[i];
+			chars[2*i] = HexChars[(b >> 4) & 15];
+			chars[2*i+1] = HexChars[b & 15];
+		}
+		return CharsToString(chars);
+	}
+	
+	public static byte[] HexDecode(String a) {
+		final int n = a.length() / 2;
+		byte[] z = new byte[n];
+		for (int i = 0; i < n; i++) {
+			int p = ValueOfHexChar(a.charAt(2*i));
+			int q = ValueOfHexChar(a.charAt(2*i+1));
+			z[i] = (byte)((p << 4) | q);
+		}
+		return z;
 	}
 
 	public static String Show(HashMap<String, String> map) {
@@ -265,11 +335,8 @@ public abstract class Yak {
 			return z;
 		}
 	}
-	
-	public class Bad extends RuntimeException {
-		public Bad(String msg, String... args) {
-			super(fmt(msg, args));
-		}
-	}
 
+	public static RuntimeException Bad(String msg, Object... args) {
+		return new RuntimeException(fmt(msg, args));
+	}
 }

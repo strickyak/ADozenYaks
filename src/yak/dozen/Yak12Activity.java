@@ -15,6 +15,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
+import yak.etc.DH;
 import yak.etc.Yak;
 
 import android.net.Uri;
@@ -48,7 +49,8 @@ import android.widget.LinearLayout.LayoutParams;
 public class Yak12Activity extends Activity {
 
 	Context mainContext;
-	ServerAccess access = new ServerAccess("http://192.168.8.252:9999/?");
+	ServerAccess access = new ServerAccess("http://yak.net:9999/?");
+	ServerAccess store = new ServerAccess("http://yak.net:9998/?");
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -134,20 +136,16 @@ public class Yak12Activity extends Activity {
 	}
 
 	public void displayDHDemo() { // DH DEMO
-		BigInteger g = new BigInteger("2");
-		BigInteger m = new BigInteger(Rfc3526Modulus1536Bits, 16);
-
-		SecureRandom rand = new SecureRandom();
-		BigInteger secA = new BigInteger(NumRandomBitsPerDHKey, rand);
-		BigInteger secB = new BigInteger(NumRandomBitsPerDHKey, rand);
+		DH secA = DH.RandomKey();
+		DH secB = DH.RandomKey();
 		// Each raises g to the secret key to get the public key.
-		BigInteger pubA = g.modPow(secA, m);
-		BigInteger pubB = g.modPow(secB, m);
+		DH pubA = secA.publicKey();
+		DH pubB = secB.publicKey();
 		// A learns pubB; B learns pubA.
-		BigInteger mutualA = pubB.modPow(secA, m); // A can compute.
-		BigInteger mutualB = pubA.modPow(secB, m); // B can compute.
+		DH mutualA = secA.mutualKey(pubB); // A can compute.
+		DH mutualB = secB.mutualKey(pubA); // B can compute.
 		// Those mutual keys should be equal.
-		BigInteger mutualDiff = mutualA.subtract(mutualB);
+		BigInteger mutualDiff = mutualA.big.subtract(mutualB.big);
 
 		String html = "<html><body><ul>";
 		html += "<li> secA = " + secA;
@@ -158,7 +156,7 @@ public class Yak12Activity extends Activity {
 		html += "<li> mutualB = " + mutualB;
 		html += "<li> mutualDiff = " + mutualDiff;
 		html += "<li> len(mutual) = " + mutualA.toString().length()
-				+ " decimal digits";
+				+ " hex digits";
 
 		DemoWebView v = new DemoWebView(mainContext, html);
 		setContentView(v);
@@ -390,16 +388,5 @@ public class Yak12Activity extends Activity {
 
 	LayoutParams FILL = new LayoutParams(LayoutParams.FILL_PARENT,
 			LayoutParams.FILL_PARENT);
-
-	static final int NumRandomBitsPerDHKey = 1535;
-
-	static final String Rfc3526Modulus1536Bits = "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
-			+ "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
-			+ "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
-			+ "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
-			+ "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"
-			+ "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
-			+ "83655D23DCA3AD961C62F356208552BB9ED529077096966D"
-			+ "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF";
 
 }

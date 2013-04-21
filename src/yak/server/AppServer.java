@@ -12,26 +12,20 @@ import yak.etc.Yak;
 
 public class AppServer extends BaseServer {
 	
+	public static final int DEFAULT_PORT = 30333;
+	
 	public static void main(String[] args) {
 		try {
-			System.err.println("Hello lmnop.");
-			// new StoreServer(9999).run();
-
-			String s = ReadUrl("file:///tmp/date");
-			System.err.println("RESULT = `" + s + "`");
-
 			// Run StoreServer in background.
-			new Thread(new StoreServer(9998)).start();
+			new Thread(new StoreServer(30333)).start();
 			
 			// Run TheSerer in main thread.
-			new AppServer(9999).run();
-			Thread.sleep(1 * 1000); // millis
-			ReadUrl("http://localhost:9998/?f=boot");
-		} catch (IOException e) {
+			new AppServer(DEFAULT_PORT).run();
+			// "Boot" initialize the storage.
+			Thread.sleep(1 * 1000); // Wait 1 sec, first.
+			ReadUrl(fmt("http://localhost:%d/?f=boot", StoreServer.DEFAULT_PORT));
+		} catch (Exception e) {
 			System.err.println("CAUGHT: " + e);
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

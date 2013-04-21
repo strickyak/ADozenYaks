@@ -12,6 +12,8 @@ import java.io.OutputStreamWriter;
 import yak.etc.BaseServer;
 
 public class StoreServer extends BaseServer {
+	public static final int DEFAULT_PORT = 30332;
+
 	public static void main(String[] args) throws IOException {
 		System.err.println("Hello, World");
 		new StoreServer(9998).run();

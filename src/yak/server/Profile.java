@@ -34,7 +34,7 @@ public class Profile extends Yak {
 				JSONObject jf = jff.getJSONObject(i);
 				Friend f = new Friend(jf);
 				if (friends.containsKey(f.name)) {
-					throw new Bad("Already has friend named '%s'", f.name);
+					throw Bad("Already has friend named '%s'", f.name);
 				}
 				friends.put(f.name, f);
 			}
@@ -45,7 +45,7 @@ public class Profile extends Yak {
 				JSONObject jr = jrr.getJSONObject(i);
 				Room r = new Room(jr);
 				if (rooms.containsKey(r.name)) {
-					throw new Bad("Already has room named '%s'", r.name);
+					throw Bad("Already has room named '%s'", r.name);
 				}
 				rooms.put(r.name, r);
 			}

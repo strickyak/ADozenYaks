@@ -16,6 +16,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
 import yak.etc.DH;
+import yak.etc.Hash;
 import yak.etc.Yak;
 
 import android.net.Uri;
@@ -146,6 +147,11 @@ public class Yak12Activity extends Activity {
 		DH mutualB = secB.mutualKey(pubA); // B can compute.
 		// Those mutual keys should be equal.
 		BigInteger mutualDiff = mutualA.big.subtract(mutualB.big);
+		
+		Hash key = new Hash("mumble");
+		String plain = "I wish I were an Oscar Mayer Wiener\000.";
+		String encr = key.Encrypt(plain, 31415);
+		String recover = key.Decrypt(encr, 31415);
 
 		String html = "<html><body><ul>";
 		html += "<li> secA = " + secA;
@@ -157,6 +163,10 @@ public class Yak12Activity extends Activity {
 		html += "<li> mutualDiff = " + mutualDiff;
 		html += "<li> len(mutual) = " + mutualA.toString().length()
 				+ " hex digits";
+
+		html += "<li> plain = " + plain.length() + ": " + Yak.CurlyEncode(plain);
+		html += "<li> encr = " + encr.length() + ": " + encr;
+		html += "<li> recover = " + recover.length() + ": " + Yak.CurlyEncode(recover);
 
 		DemoWebView v = new DemoWebView(mainContext, html);
 		setContentView(v);

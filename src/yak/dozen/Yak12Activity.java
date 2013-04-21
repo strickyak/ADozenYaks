@@ -23,6 +23,7 @@ import yak.server.AppServer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
@@ -30,6 +31,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.text.InputType;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -45,6 +47,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout.LayoutParams;
 
@@ -55,18 +59,21 @@ public class Yak12Activity extends Activity {
 	static AppServer server;
 	static Thread serverThread;
 
+	Handler handler = new Handler();
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		this.mainContext = this;
-		
+
 		if (serverThread == null) {
-			access = new ServerAccess(Yak.fmt("http://localhost:%d/?", AppServer.DEFAULT_PORT));
+			access = new ServerAccess(Yak.fmt("http://localhost:%d/?",
+					AppServer.DEFAULT_PORT));
 			server = new AppServer(AppServer.DEFAULT_PORT);
 			serverThread = new Thread(server);
 			serverThread.start();
 			try {
-				Thread.sleep(333 /*millis*/);
+				Thread.sleep(333 /* millis */);
 			} catch (InterruptedException e) {
 				// pass.
 			}
@@ -78,7 +85,11 @@ public class Yak12Activity extends Activity {
 		String path = uri == null ? "/" : uri.getPath();
 		String query = uri == null ? "" : uri.getQuery();
 
-		display(path, query, extras, savedInstanceState);
+		handleYak12Intent(path, query, extras, savedInstanceState);
+	}
+
+	public void toast(String message) {
+		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
 	}
 
 	@Override
@@ -88,24 +99,25 @@ public class Yak12Activity extends Activity {
 		return true;
 	}
 
-	private void display(String path, String query, Bundle extras,
+	private void handleYak12Intent(String path, String query, Bundle extras,
 			Bundle savedInstanceState) {
 		try {
 			Log.i("antti", "PATH=" + path);
 			String[] words = path.split("/");
-			Log.i("antti", "words.LEN=" + words.length);
+			// Log.i("antti", "words.LEN=" + words.length);
 			String verb = "";
 			if (words.length > 1) {
 				verb = words[1];
 			}
 
 			Log.i("antti", "=============== VERB =" + verb);
-			if (verb.equals("list")) {
-				String[] labels = extras.getString("items").split(";");
-				displayList(labels);
-			} else if (verb.equals("rendez")) {
-				displayRendezvous(words[2]);
-			} else if (verb.equals("dhdemo")) {
+//			if (verb.equals("XXXlist")) {
+//				String[] labels = extras.getString("items").split(";");
+//				displayList(labels);
+//			} else if (verb.equals("XXXrendez")) {
+//				displayRendezvous(words[2]);
+//			} else 
+				if (verb.equals("dhdemo")) {
 				displayDHDemo();
 			} else if (verb.equals("web")) {
 				displayWeb((String) extras.get("html"));
@@ -118,8 +130,14 @@ public class Yak12Activity extends Activity {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			displayWeb(Yak.htmlEscape(e.toString()));
+			toast(e.toString());
+			displayText("handleYak12Intent CAUGHT EXCEPTION:\n\n"
+					+ e.toString());
 		}
+	}
+
+	private void displayText(String s) {
+		setContentView(new ATextView(this, s));
 	}
 
 	private void displayDefault() {
@@ -129,9 +147,19 @@ public class Yak12Activity extends Activity {
 		setContentView(v);
 	}
 
-	private void displayWeb(String html) {
-		DemoWebView v = new DemoWebView(mainContext, html);
+	private void displayWeb(final String html) {
+		// handler.post(new Runnable() {
+		// @Override
+		// public void run() {
+		Log.i("displayWeb", "Running TEXT-WEB POST");
+		toast("Displaying TEXT-WEB POST: " + html);
+
+		// DemoWebView v = new DemoWebView(mainContext, html);
+		ATextView v = new ATextView(mainContext, html);
 		setContentView(v);
+
+		// }
+		// });
 	}
 
 	private void displayChannel777() throws ClientProtocolException,
@@ -143,11 +171,11 @@ public class Yak12Activity extends Activity {
 		access.displayChannel0();
 	}
 
-	public void displayRendezvous(String myId) {
-		DemoWebView v = new DemoWebView(mainContext, "");
-		v.loadUrl("file:///android_asset/redez_start.html");
-		setContentView(v);
-	}
+//	public void displayRendezvous(String myId) {
+//		DemoWebView v = new DemoWebView(mainContext, "");
+//		v.loadUrl("file:///android_asset/redez_start.html");
+//		setContentView(v);
+//	}
 
 	public void displayDHDemo() { // DH DEMO
 		DH secA = DH.RandomKey();
@@ -160,7 +188,7 @@ public class Yak12Activity extends Activity {
 		DH mutualB = secB.mutualKey(pubA); // B can compute.
 		// Those mutual keys should be equal.
 		BigInteger mutualDiff = mutualA.big.subtract(mutualB.big);
-		
+
 		Hash key = new Hash("mumble");
 		String plain = "I wish I were an Oscar Mayer Wiener\000.";
 		String encr = key.Encrypt(plain, 31415);
@@ -177,9 +205,11 @@ public class Yak12Activity extends Activity {
 		html += "<li> len(mutual) = " + mutualA.toString().length()
 				+ " hex digits";
 
-		html += "<li> plain = " + plain.length() + ": " + Yak.CurlyEncode(plain);
+		html += "<li> plain = " + plain.length() + ": "
+				+ Yak.CurlyEncode(plain);
 		html += "<li> encr = " + encr.length() + ": " + encr;
-		html += "<li> recover = " + recover.length() + ": " + Yak.CurlyEncode(recover);
+		html += "<li> recover = " + recover.length() + ": "
+				+ Yak.CurlyEncode(recover);
 
 		DemoWebView v = new DemoWebView(mainContext, html);
 		setContentView(v);
@@ -215,12 +245,15 @@ public class Yak12Activity extends Activity {
 						html = getUrl(url);
 					} catch (Exception e) {
 						e.printStackTrace();
-						html = "getUrlAndDisplay ERROR:<br>" + htmlEscape(e.toString());
+						html = "getUrlAndDisplay ERROR:<br>"
+								+ htmlEscape(e.toString());
 					}
 					final String finalHtml = html;
 
-					Log.i("getUrlAndDisplay", ">>> html: " + CurlyEncode(finalHtml));
-					runOnUiThread(new Runnable() {
+					Log.i("getUrlAndDisplay", ">>> html: "
+							+ CurlyEncode(finalHtml));
+					// runOnUiThread(
+					handler.post(new Runnable() {
 						@Override
 						public void run() {
 							Log.i("getUrlAndDisplay", "runningOnUiThread: "
@@ -230,6 +263,7 @@ public class Yak12Activity extends Activity {
 					});
 				}
 			}.start(); // Start background thread.
+			displayText("FETCHING " + url);
 		}
 
 		private String getUrl(String url) throws ClientProtocolException,
@@ -256,10 +290,10 @@ public class Yak12Activity extends Activity {
 		}
 	}
 
-	private void displayList(String[] labels) {
-		DemoListView v = new DemoListView(mainContext, labels);
-		setContentView(v);
-	}
+//	private void displayList(String[] labels) {
+//		DemoListView v = new DemoListView(mainContext, labels);
+//		setContentView(v);
+//	}
 
 	public abstract class AListView extends ListView {
 
@@ -367,6 +401,16 @@ public class Yak12Activity extends Activity {
 		}
 	}
 
+	public class ATextView extends TextView {
+		public ATextView(Context context, String text) {
+			super(context);
+			this.setText(text);
+			this.setBackgroundColor(Color.BLACK);
+			this.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+			this.setTextColor(Color.YELLOW);
+		}
+	}
+
 	void startList(String[] labels) {
 		String z = "";
 		for (String s : labels) {
@@ -400,13 +444,14 @@ public class Yak12Activity extends Activity {
 	}
 
 	void startMain(String actPath, String actQuery, String... extrasKV) {
-		Uri uri = new Uri.Builder().scheme("terse").path(actPath)
+		Uri uri = new Uri.Builder().scheme("yak12").path(actPath)
 				.encodedQuery(actQuery).build();
 		Intent intent = new Intent("android.intent.action.MAIN", uri);
 		intent.setClass(getApplicationContext(), Yak12Activity.class);
 		for (int i = 0; i < extrasKV.length; i += 2) {
 			intent.putExtra((String) extrasKV[i], extrasKV[i + 1]);
 		}
+
 		startActivity(intent);
 	}
 

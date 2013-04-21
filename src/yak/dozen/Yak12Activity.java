@@ -18,6 +18,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import yak.etc.DH;
 import yak.etc.Hash;
 import yak.etc.Yak;
+import yak.server.AppServer;
 
 import android.net.Uri;
 import android.os.Build;
@@ -49,15 +50,27 @@ import android.widget.LinearLayout.LayoutParams;
 
 public class Yak12Activity extends Activity {
 
-	Context mainContext;
-	ServerAccess access = new ServerAccess("http://yak.net:9999/?");
-	ServerAccess store = new ServerAccess("http://yak.net:9998/?");
+	static Context mainContext;
+	static ServerAccess access;
+	static AppServer server;
+	static Thread serverThread;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		// setContentView(R.layout.activity_yak12);
 		this.mainContext = this;
+		
+		if (serverThread == null) {
+			access = new ServerAccess(Yak.fmt("http://localhost:%d/?", AppServer.DEFAULT_PORT));
+			server = new AppServer(AppServer.DEFAULT_PORT);
+			serverThread = new Thread(server);
+			serverThread.start();
+			try {
+				Thread.sleep(333 /*millis*/);
+			} catch (InterruptedException e) {
+				// pass.
+			}
+		}
 
 		Intent intent = getIntent();
 		Uri uri = intent.getData();
@@ -198,14 +211,15 @@ public class Yak12Activity extends Activity {
 				public void run() {
 					String html = null;
 					try {
+						Log.i("getUrlAndDisplay", "<<< bg: " + CurlyEncode(url));
 						html = getUrl(url);
 					} catch (Exception e) {
 						e.printStackTrace();
-						html = "ERROR:<br>" + htmlEscape(e.toString());
+						html = "getUrlAndDisplay ERROR:<br>" + htmlEscape(e.toString());
 					}
 					final String finalHtml = html;
 
-					Log.i("getUrlAndDisplay", "html: " + CurlyEncode(finalHtml));
+					Log.i("getUrlAndDisplay", ">>> html: " + CurlyEncode(finalHtml));
 					runOnUiThread(new Runnable() {
 						@Override
 						public void run() {

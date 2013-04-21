@@ -13,10 +13,11 @@ import yak.etc.BaseServer;
 
 public class StoreServer extends BaseServer {
 	public static final int DEFAULT_PORT = 30332;
+	public static final String DEFAULT_HOST = "yak.net";
 
 	public static void main(String[] args) throws IOException {
-		System.err.println("Hello, World");
-		new StoreServer(9998).run();
+		System.err.println("Hello, StoreServer!");
+		new StoreServer(DEFAULT_PORT).run();
 	}
 
 	public StoreServer(int port) {

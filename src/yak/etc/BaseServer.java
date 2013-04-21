@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import android.util.Log;
+
 public abstract class BaseServer extends Yak implements Runnable {
 	int port;
 
@@ -25,6 +27,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 		try {
 			final ServerSocket serverSocket = new ServerSocket(port);
 			System.err.println("Listening on port " + port);
+			// Log.i("BaseServer", fmt("%s Listening on port %s", this, port));
 			while (true) {
 				final Socket clientSocket = serverSocket.accept();
 

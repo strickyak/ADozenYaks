@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import android.util.Log;
+
 import yak.etc.BaseServer;
 import yak.etc.BaseServer.Request;
 import yak.etc.BaseServer.Response;
@@ -32,6 +34,7 @@ public class AppServer extends BaseServer {
 
 	public AppServer(int port) {
 		super(port);
+		// Log.i("AppServer", fmt("AppServer Constructed on port %s", port));
 	}
 
 	public Response handleRequest(Request req) {
@@ -85,6 +88,7 @@ public class AppServer extends BaseServer {
 	}
 	
 	public String UseStore(String verb, String args) throws IOException {
-		return ReadUrl("http://localhost:9998/?f=" + verb + "&" + args);
+		return ReadUrl(fmt("http://%s:%s/?f=%s&%s",
+				StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT, verb, args));
 	}
 }

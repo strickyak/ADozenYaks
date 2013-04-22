@@ -60,6 +60,14 @@ public abstract class Yak {
 		return bytes;
 	}
 	
+	public static void sleepSecs(double secs) {
+		try {
+			Thread.sleep((long)(secs * 1000) /*ms*/);
+		} catch (InterruptedException e) {
+			// pass.
+		}
+	}
+
 	public static String BytesToString(byte[] bytes) {
 		final int n = bytes.length;
 		char[] chars = new char[n];

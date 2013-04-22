@@ -54,29 +54,26 @@ import android.widget.LinearLayout.LayoutParams;
 
 public class Yak12Activity extends Activity {
 
-	static Context mainContext;
-	static ServerAccess access;
+	static AppCaller appCaller;
 	static AppServer server;
 	static Thread serverThread;
-
-	Handler handler = new Handler();
-
+	
+	Context yakContext = this;
+	Handler yakHandler = new Handler();
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+    	Log.i("yak12", "###### onCreate.");
 		super.onCreate(savedInstanceState);
-		this.mainContext = this;
 
+		// Start embedded App Server, if it is not yet started.
 		if (serverThread == null) {
-			access = new ServerAccess(Yak.fmt("http://localhost:%d/?",
+			appCaller = new AppCaller(Yak.fmt("http://localhost:%d/?",
 					AppServer.DEFAULT_PORT));
 			server = new AppServer(AppServer.DEFAULT_PORT);
 			serverThread = new Thread(server);
 			serverThread.start();
-			try {
-				Thread.sleep(333 /* millis */);
-			} catch (InterruptedException e) {
-				// pass.
-			}
+			Yak.sleepSecs(0.333);
 		}
 
 		Intent intent = getIntent();
@@ -88,16 +85,6 @@ public class Yak12Activity extends Activity {
 		handleYak12Intent(path, query, extras, savedInstanceState);
 	}
 
-	public void toast(String message) {
-		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-	}
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.yak12, menu);
-		return true;
-	}
 
 	private void handleYak12Intent(String path, String query, Bundle extras,
 			Bundle savedInstanceState) {
@@ -118,15 +105,15 @@ public class Yak12Activity extends Activity {
 //				displayRendezvous(words[2]);
 //			} else 
 				if (verb.equals("dhdemo")) {
-				displayDHDemo();
-			} else if (verb.equals("web")) {
-				displayWeb((String) extras.get("html"));
+				handleDHDemo();
+//			} else if (verb.equals("web")) {
+//				displayWeb((String) extras.get("html"));
 			} else if (verb.equals("Channel777")) {
-				displayChannel777();
-			} else if (verb.equals("Channel0")) {
-				displayChannel0();
+				handleChannel777();
+//			} else if (verb.equals("Channel0")) {
+//				displayChannel0();
 			} else {
-				displayDefault();
+				handleDefault();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -136,15 +123,39 @@ public class Yak12Activity extends Activity {
 		}
 	}
 
-	private void displayText(String s) {
-		setContentView(new ATextView(this, s));
+	public void toast(String message) {
+		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
 	}
 
-	private void displayDefault() {
-		String[] numbers = new String[] { "One", "Two", "Three", "Channel",
-				"Rendezvous", "dhdemo", "Channel777", "Channel0", };
-		DemoListView v = new DemoListView(mainContext, numbers);
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.yak12, menu);
+		return true;
+	}
+	
+	///////////////////////////////////////////////////
+
+
+	private void handleChannel777() throws ClientProtocolException,
+			IOException {
+		appCaller.handleChannel777();
+	}
+
+	private void handleDefault() {
+		displayList(new String[] { "One", "Two", "Three", "Channel",
+			"Rendezvous", "dhdemo", "Channel777", "Channel0", });
+	}
+	
+	////////////////////////////////////////////////////
+	
+	private void displayList(String[] labels) {
+		AListView v = new AListView(labels);
 		setContentView(v);
+	}
+	
+	private void displayText(String s) {
+		setContentView(new ATextView(s));
 	}
 
 	private void displayWeb(final String html) {
@@ -154,30 +165,26 @@ public class Yak12Activity extends Activity {
 		Log.i("displayWeb", "Running TEXT-WEB POST");
 		toast("Displaying TEXT-WEB POST: " + html);
 
-		// DemoWebView v = new DemoWebView(mainContext, html);
-		ATextView v = new ATextView(mainContext, html);
+		// AWebView v = new AWebView(mainContext, html);
+		ATextView v = new ATextView(html);
 		setContentView(v);
 
+		
 		// }
 		// });
 	}
 
-	private void displayChannel777() throws ClientProtocolException,
-			IOException {
-		access.displayChannel777();
-	}
-
-	private void displayChannel0() throws ClientProtocolException, IOException {
-		access.displayChannel0();
-	}
+//	private void displayChannel0() throws ClientProtocolException, IOException {
+//		access.displayChannel0();
+//	}
 
 //	public void displayRendezvous(String myId) {
-//		DemoWebView v = new DemoWebView(mainContext, "");
+//		AWebView v = new AWebView(mainContext, "");
 //		v.loadUrl("file:///android_asset/redez_start.html");
 //		setContentView(v);
 //	}
 
-	public void displayDHDemo() { // DH DEMO
+	public void handleDHDemo() { // DH DEMO
 		DH secA = DH.RandomKey();
 		DH secB = DH.RandomKey();
 		// Each raises g to the secret key to get the public key.
@@ -211,31 +218,31 @@ public class Yak12Activity extends Activity {
 		html += "<li> recover = " + recover.length() + ": "
 				+ Yak.CurlyEncode(recover);
 
-		DemoWebView v = new DemoWebView(mainContext, html);
+		AWebView v = new AWebView(html);
 		setContentView(v);
 	}
 
-	// Provides access to the storage.
-	public class ServerAccess extends Yak {
+	// Provides access to the App Server.
+	public class AppCaller extends Yak {
 
 		String baseUrl;
 
-		public ServerAccess(String baseUrl) {
+		public AppCaller(String baseUrl) {
 			this.baseUrl = baseUrl;
 		}
 
-		public void displayChannel777() throws ClientProtocolException,
+		public void handleChannel777() throws ClientProtocolException,
 				IOException {
 			getUrlAndDisplay(baseUrl + "f=chan&c=777");
 		}
 
-		public void displayChannel0() throws ClientProtocolException,
-				IOException {
-			getUrlAndDisplay(baseUrl + "f=Channel0");
-		}
-
+		/** Details of getUrl in bg, and fill in view in UI Thread. */
 		public void getUrlAndDisplay(final String url)
 				throws ClientProtocolException, IOException {
+			final VerticalView vert = new VerticalView();
+			vert.addView(new ATextView(Yak.CurlyEncode(url)));
+			setContentView(vert);
+
 			new Thread() { // A background thread.
 				@Override
 				public void run() {
@@ -253,19 +260,20 @@ public class Yak12Activity extends Activity {
 					Log.i("getUrlAndDisplay", ">>> html: "
 							+ CurlyEncode(finalHtml));
 					// runOnUiThread(
-					handler.post(new Runnable() {
+					yakHandler.post(new Runnable() {
 						@Override
 						public void run() {
-							Log.i("getUrlAndDisplay", "runningOnUiThread: "
-									+ CurlyEncode(finalHtml));
-							displayWeb(finalHtml);
+							Log.i("Posting", CurlyEncode(finalHtml));
+							//##// displayWeb(finalHtml);
+							vert.addView(new ATextView(finalHtml));
 						}
 					});
 				}
 			}.start(); // Start background thread.
-			displayText("FETCHING " + url);
+			//##// displayText("FETCHING " + url);
 		}
 
+		/** Details of client HTTP GET; expecting only 200 or error. */
 		private String getUrl(String url) throws ClientProtocolException,
 				IOException {
 			HttpClient httpclient = new DefaultHttpClient();
@@ -290,46 +298,54 @@ public class Yak12Activity extends Activity {
 		}
 	}
 
-//	private void displayList(String[] labels) {
-//		DemoListView v = new DemoListView(mainContext, labels);
-//		setContentView(v);
-//	}
+	public class AListView extends ListView {
 
-	public abstract class AListView extends ListView {
-
-		Context context;
 		String[] labels;
 
-		public AListView(Context context, final String[] labels) {
-			super(context);
-			this.context = context;
+		public AListView(final String[] labels) {
+			super(yakContext);
 			this.labels = labels;
 
-			this.setAdapter(new ArrayAdapter<String>(context,
+			this.setAdapter(new ArrayAdapter<String>(yakContext,
 					R.layout.list_item, labels));
 
 			this.setLayoutParams(FILL);
 			this.setTextFilterEnabled(true);
 
-			this.setOnItemClickListener(new OnItemClickListener() {
-				@Override
-				public void onItemClick(AdapterView<?> arg0, View arg1,
-						int arg2, long arg3) {
-					onClick(arg2, labels[arg2]);
+			this.setOnItemClickListener(new ClickListener());
+		}
+
+		private class ClickListener implements OnItemClickListener {
+
+			@Override
+			public void onItemClick(AdapterView<?> arg0, View arg1, int index,
+					long arg3) {
+				final String label = labels[index];
+				if (label == "Channel") {
+					startChannel("555");
+				} else if (label == "dhdemo") {
+					startDHDemo();
+				} else if (label == "Channel777") {
+					startChannel777();
+				} else if (label == "Channel0") {
+					startChannel0();
+				} else if (label == "Rendezvous") {
+					SecureRandom random = null;
+					try {
+						random = SecureRandom.getInstance("SHA1PRNG");
+					} catch (NoSuchAlgorithmException e) {
+						Log.i("antti", e.getMessage());
+					}
+					int mytempid = random.nextInt();
+					startRendezvous(String.valueOf(mytempid));
+				} else {
+					String html = "UNKNOWN LABEL {" + label + "}.";
+					startWeb(html);
 				}
-			});
+			}
+			
 		}
 
-		protected abstract void onClick(int index, String label);
-	}
-
-	public class DemoListView extends AListView {
-
-		public DemoListView(Context context, String[] labels) {
-			super(context, labels);
-		}
-
-		@Override
 		protected void onClick(int index, String label) {
 			if (label == "Channel") {
 				startChannel("555");
@@ -353,14 +369,13 @@ public class Yak12Activity extends Activity {
 				startWeb(html);
 			}
 		}
-
 	}
 
-	public abstract class AWebView extends WebView {
+	public class AWebView extends WebView {
 
 		@TargetApi(Build.VERSION_CODES.ECLAIR_MR1)
-		public AWebView(Context context, String html) {
-			super(context);
+		public AWebView(String html) {
+			super(yakContext);
 
 			this.loadDataWithBaseURL("terse://terse", html, "text/html",
 					"UTF-8", null);
@@ -381,15 +396,6 @@ public class Yak12Activity extends Activity {
 			});
 		}
 
-		protected abstract boolean onClickLink(String url);
-	}
-
-	public class DemoWebView extends AWebView {
-
-		public DemoWebView(Context context, String html) {
-			super(context, html);
-		}
-
 		protected boolean onClickLink(String url) {
 			URI uri = URI.create("" + url);
 			String path = uri.getPath();
@@ -402,14 +408,23 @@ public class Yak12Activity extends Activity {
 	}
 
 	public class ATextView extends TextView {
-		public ATextView(Context context, String text) {
-			super(context);
+		public ATextView(String text) {
+			super(yakContext);
 			this.setText(text);
 			this.setBackgroundColor(Color.BLACK);
 			this.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
 			this.setTextColor(Color.YELLOW);
 		}
 	}
+	
+	public class VerticalView extends LinearLayout {
+		public VerticalView() {
+			super(yakContext);
+			this.setOrientation(LinearLayout.VERTICAL);
+		}
+	}
+	
+	// Activity Starters
 
 	void startList(String[] labels) {
 		String z = "";
@@ -454,6 +469,43 @@ public class Yak12Activity extends Activity {
 
 		startActivity(intent);
 	}
+
+	
+	//////////////////////////////////////
+	// Other Activity Events.
+
+    protected void onStart() {
+    	Log.i("yak12", "###### onStart");
+    	super.onStart();
+    }
+    
+    protected void onRestart() {
+    	Log.i("yak12", "###### onRestart");
+    	super.onRestart();
+    }
+
+    protected void onResume() {
+    	Log.i("yak12", "###### onResume");
+    	super.onResume();
+    }
+
+    protected void onPause() {
+    	Log.i("yak12", "###### onPause");
+    	super.onPause();
+    }
+
+    protected void onStop() {
+    	Log.i("yak12", "###### onStop");
+    	super.onStop();
+    }
+
+    protected void onDestroy() {
+    	Log.i("yak12", "###### onDestroy");
+    	super.onDestroy();
+    }
+    
+    ////////////////////////////////
+    // Constants.
 
 	LayoutParams FILL = new LayoutParams(LayoutParams.FILL_PARENT,
 			LayoutParams.FILL_PARENT);

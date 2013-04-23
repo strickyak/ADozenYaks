@@ -40,6 +40,12 @@ public class StoreServer extends BaseServer {
 		String latest = req.query.get("latest");
 		String value = req.query.get("value");
 
+		if (verb != null) checkName(verb);
+		if (user != null) checkName(user);
+		if (channel != null) checkName(channel);
+		if (tnode != null) checkName(tnode);
+		if (latest != null) checkName(latest);
+		
 		try {
 			if (verb.equals("fetch")) {
 				z = doVerbFetch(channel, tnode);
@@ -114,5 +120,17 @@ public class StoreServer extends BaseServer {
 		z += " # " + doVerbCreate("888", "104", "fourth", "nobody");
 		z += " # " + doVerbCreate("888", "105", "fifth", "nobody");
 		return z + "\n\n... BOOTED.";
+	}
+	
+	public void checkName(String s) {
+		final int n = s.length();
+		for (int i = 0; i < n; i++) {
+			char c = s.charAt(i);
+			if ('0' <= c && c <= '9') continue;
+			if ('a' <= c && c <= 'z') continue;
+			if ('A' <= c && c <= 'Z') continue;
+			if (c == '_') continue;
+			throw Bad("BAD CHAR %d", c);
+		}
 	}
 }

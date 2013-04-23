@@ -100,8 +100,10 @@ public class Yak12Activity extends Activity {
 				handleDHDemo();
 			} else if (verb.equals("Channel777")) {
 				handleChannel777();
-			} else {
+			} else if (verb.equals("")) {
 				handleDefault();
+			} else {
+				handleOther(uri);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -129,6 +131,10 @@ public class Yak12Activity extends Activity {
 		appCaller.handleChannel777();
 	}
 
+	private void handleOther(Uri uri) throws ClientProtocolException, IOException {
+		appCaller.handleOther(uri);
+	}
+
 	private void handleDefault() {
 		displayList(new String[] { "One", "Two", "Three", "Channel",
 				"Rendezvous", "dhdemo", "Channel777", "Channel0", });
@@ -146,30 +152,11 @@ public class Yak12Activity extends Activity {
 	}
 
 	private void displayWeb(final String html) {
-		// handler.post(new Runnable() {
-		// @Override
-		// public void run() {
 		Log.i("displayWeb", "Running TEXT-WEB POST");
-		toast("Displaying TEXT-WEB POST: " + html);
-
-		// AWebView v = new AWebView(mainContext, html);
-		ATextView v = new ATextView(html);
+		WebView v = new AWebView(html);
+		// ATextView v = new ATextView(html);
 		setContentView(v);
-
-		// }
-		// });
 	}
-
-	// private void displayChannel0() throws ClientProtocolException,
-	// IOException {
-	// access.displayChannel0();
-	// }
-
-	// public void displayRendezvous(String myId) {
-	// AWebView v = new AWebView(mainContext, "");
-	// v.loadUrl("file:///android_asset/redez_start.html");
-	// setContentView(v);
-	// }
 
 	public void handleDHDemo() { // DH DEMO
 		DH secA = DH.RandomKey();
@@ -217,7 +204,13 @@ public class Yak12Activity extends Activity {
 		public AppCaller(String baseUrl) {
 			this.baseUrl = baseUrl;
 		}
+		
+		
 
+		public void handleOther(Uri uri) throws ClientProtocolException,
+				IOException {
+			getUrlAndDisplay(baseUrl + "uri=" + uri);
+		}
 		public void handleChannel777() throws ClientProtocolException,
 				IOException {
 			getUrlAndDisplay(baseUrl + "f=chan&c=777");
@@ -248,18 +241,16 @@ public class Yak12Activity extends Activity {
 
 					Log.i("getUrlAndDisplay", ">>> html: "
 							+ CurlyEncode(finalHtml));
-					// runOnUiThread(
+
 					yakHandler.post(new Runnable() {
 						@Override
 						public void run() {
 							Log.i("Posting", CurlyEncode(finalHtml));
-							// ##// displayWeb(finalHtml);
-							vert.addView(new ATextView(finalHtml));
+							vert.addView(new AWebView(finalHtml));
 						}
 					});
 				}
-			}.start(); // Start background thread.
-			// ##// displayText("FETCHING " + url);
+			}.start();
 		}
 
 		/** Details of client HTTP GET; expecting only 200 or error. */
@@ -329,34 +320,8 @@ public class Yak12Activity extends Activity {
 					int mytempid = random.nextInt();
 					startRendezvous(String.valueOf(mytempid));
 				} else {
-					String html = "UNKNOWN LABEL {" + label + "}.";
-					startWeb(html);
+					startMain("/" + label, "xyz=789");
 				}
-			}
-
-		}
-
-		protected void onClick(int index, String label) {
-			if (label == "Channel") {
-				startChannel("555");
-			} else if (label == "dhdemo") {
-				startDHDemo();
-			} else if (label == "Channel777") {
-				startChannel777();
-			} else if (label == "Channel0") {
-				startChannel0();
-			} else if (label == "Rendezvous") {
-				SecureRandom random = null;
-				try {
-					random = SecureRandom.getInstance("SHA1PRNG");
-				} catch (NoSuchAlgorithmException e) {
-					Log.i("antti", e.getMessage());
-				}
-				int mytempid = random.nextInt();
-				startRendezvous(String.valueOf(mytempid));
-			} else {
-				String html = "UNKNOWN LABEL {" + label + "}.";
-				startWeb(html);
 			}
 		}
 	}
@@ -431,10 +396,6 @@ public class Yak12Activity extends Activity {
 			z = z + labels + ";";
 		}
 		startMain("/list", null, "items", z);
-	}
-
-	void startWeb(String html) {
-		startMain("/web", null, "html", html);
 	}
 
 	void startChannel(String chanKey) {

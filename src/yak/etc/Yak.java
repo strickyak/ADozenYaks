@@ -257,6 +257,8 @@ public abstract class Yak {
 					sb.append("&quot;");
 				case '\n':
 					sb.append(lineBreaks ? "<br>" : "&#10;");
+				default:
+					sb.append(c);
 				}
 			} else {
 				sb.append("&#" + (int) c + ";");

@@ -47,18 +47,22 @@ public class AppServer extends BaseServer {
 			return new Response("No favicon.ico here.", 404, "text/plain");
 		}
 
+		String uri = req.query.get("uri");
 		String verb = req.query.get("f");
 		String user = req.query.get("u");
 		String channel = req.query.get("c");
 		String tnode = req.query.get("t");
 		String latest = req.query.get("latest");
 		String value = req.query.get("value");
+		verb = (verb == null) ? "null" : verb;
 
 		try {
 			if (verb.equals("boot")) {
 				z = doVerbBoot();
 			} else if (verb.equals("chan")) {
 				z = doVerbChan(channel);
+			} else if (uri != null) {
+				z = doUri(uri);
 			} else {
 				throw new Exception("bad Verb: " + verb);
 			}
@@ -69,6 +73,14 @@ public class AppServer extends BaseServer {
 		}
 
 		return new Response(z, 200, "text/html");
+	}
+
+	private String doUri(String uri) throws IOException {
+		String a = uri.toString();
+		System.err.println("+++ doUri: <" + a);
+		String z = htmlEscape("URI IS " + CurlyEncode(a));
+		System.err.println("+++ doUri: >" + z);
+		return z;
 	}
 
 	private String doVerbBoot() throws IOException {

@@ -345,8 +345,21 @@ public abstract class Yak {
 			return z;
 		}
 	}
+	
+	public static boolean isAlphaNum(String s) {
+		final int n = s.length();
+		for (int i = 0; i < n; i++) {
+			char c = s.charAt(i);
+			if ('0' <= c && c <= '9') continue;
+			if ('a' <= c && c <= 'z') continue;
+			if ('A' <= c && c <= 'Z') continue;
+			if (c == '_') continue;
+			return false;
+		}
+		return true;
+	}
 
 	public static RuntimeException Bad(String msg, Object... args) {
-		return new RuntimeException(fmt(msg, args));
+		return new RuntimeException("BAD { " + fmt(msg, args) + " }");
 	}
 }

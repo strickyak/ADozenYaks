@@ -19,13 +19,13 @@ public class AppServer extends BaseServer {
 	public static void main(String[] args) {
 		try {
 			// Run StoreServer in background.
-			new Thread(new StoreServer(30333)).start();
+			new Thread(new StoreServer(30333, "MagicYak")).start();
 			
 			// Run TheSerer in main thread.
 			new AppServer(DEFAULT_PORT).run();
 			// "Boot" initialize the storage.
 			Thread.sleep(1 * 1000); // Wait 1 sec, first.
-			ReadUrl(fmt("http://localhost:%d/?f=boot", StoreServer.DEFAULT_PORT));
+			ReadUrl(fmt("http://localhost:%d/MagicYak?f=boot", StoreServer.DEFAULT_PORT));
 		} catch (Exception e) {
 			System.err.println("CAUGHT: " + e);
 			e.printStackTrace();
@@ -92,6 +92,10 @@ public class AppServer extends BaseServer {
 		String z = fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
 		z += "<br><dl>\n";
 		for (String t : tnodes) {
+			if (!(isAlphaNum(t))) {
+				throw Bad("listed tnode not alphanum: %s", Show(tnodes));
+			}
+			
 			z += "<dt><b>" + t + "</b><br>\n";
 			z += "<dd><pre>\n" + UseStore("fetch", fmt("c=%s&t=%s", channel, t)) + "\n</pre>\n";
 		}
@@ -100,7 +104,7 @@ public class AppServer extends BaseServer {
 	}
 	
 	public String UseStore(String verb, String args) throws IOException {
-		return ReadUrl(fmt("http://%s:%s/?f=%s&%s",
+		return ReadUrl(fmt("http://%s:%s/MagicYak?f=%s&%s",
 				StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT, verb, args));
 	}
 }

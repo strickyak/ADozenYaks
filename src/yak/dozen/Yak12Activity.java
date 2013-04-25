@@ -57,7 +57,6 @@ public class Yak12Activity extends Activity {
 	static AppServer server;
 	static Thread serverThread;
 
-
 	AppCaller appCaller = new AppCaller(Yak.fmt("http://localhost:%d/?",
 			AppServer.DEFAULT_PORT));;
 	Context yakContext = this;

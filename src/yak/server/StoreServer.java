@@ -14,49 +14,49 @@ import yak.etc.BaseServer;
 public class StoreServer extends BaseServer {
 	public static final int DEFAULT_PORT = 30332;
 	public static final String DEFAULT_HOST = "yak.net";
+	
+	public String magicWord;
 
 	public static void main(String[] args) throws IOException {
-		System.err.println("Hello, StoreServer!");
-		new StoreServer(DEFAULT_PORT).run();
+		System.err.println("Hello, StoreServer! ");
+		if (args.length != 1) {
+			throw Bad("StoreServer needs one arg, the magic word: ", Show(args));
+		}
+		String magicWord = args[0];
+		if (!(isAlphaNum(magicWord))) {
+			throw Bad("magicWord must be alphaNum.");
+		}
+		new StoreServer(DEFAULT_PORT, magicWord).run();
 	}
 
-	public StoreServer(int port) {
+	public StoreServer(int port, String magicWord) {
 		super(port);
+		this.magicWord = magicWord;
 	}
 
 	public Response handleRequest(Request req) {
-		String z = "{REQ PATH=" + Show(req.path) + " QUERY=" + Show(req.query)
-				+ "}";
-		System.err.println(z);
-
 		if (req.path[0].equals("favicon.ico")) {
 			return new Response("No favicon.ico here.", 404, "text/plain");
 		}
+		
+		if (!(req.path[0].equals(magicWord))) {
+			throw Bad("Bad Magic Word: (%s) %s", magicWord, Show(req.path));
+		}
 
-		String verb = req.query.get("f");
-		String user = req.query.get("u");
-		String channel = req.query.get("c");
-		String tnode = req.query.get("t");
-		String latest = req.query.get("latest");
-		String value = req.query.get("value");
-
-		if (verb != null) checkName(verb);
-		if (user != null) checkName(user);
-		if (channel != null) checkName(channel);
-		if (tnode != null) checkName(tnode);
-		if (latest != null) checkName(latest);
+		String verb = req.getAlphaNumQuery("f");
+		String z = "MU";
 		
 		try {
 			if (verb.equals("fetch")) {
-				z = doVerbFetch(channel, tnode);
+				z = doVerbFetch(req);
 			} else if (verb.equals("list")) {
-				z = doVerbList(channel, latest);
+				z = doVerbList(req);
 			} else if (verb.equals("create")) {
-				z = doVerbCreate(channel, tnode, value, user);
+				z = doVerbCreate(req);
 			} else if (verb.equals("boot")) {
-				z = doVerbBoot();
+				z = doVerbBoot(req);
 			} else {
-				throw new IllegalArgumentException("Bad verb: " + verb);
+				throw Bad("Bad verb: " + verb);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -67,9 +67,10 @@ public class StoreServer extends BaseServer {
 		return new Response(z, 200, "text/plain");
 	}
 
-	public String doVerbList(String channel, String latest) {
-		System.err
-				.printf("LIST << channel: %s, latest: %s \n", channel, latest);
+	public String doVerbList(Request req) {
+		String channel = req.getAlphaNumQuery("c");
+		// TODO: latest;
+		System.err.printf("LIST << channel: %s, latest: %s \n", channel, "TODO");
 		File chanDir = new File(String.format("data/%s/", channel));
 		String[] inodes = chanDir.list();
 		if (inodes == null) {
@@ -81,29 +82,19 @@ public class StoreServer extends BaseServer {
 		return z;
 	}
 
-	public String doVerbFetch(String channel, String tnode) throws IOException {
-		if (channel == null) {
-			throw new RuntimeException("NULL CHANNEL!");
-		}
-		if (tnode == null) {
-			throw new RuntimeException("NULL TNODE!");
-		}
+	public String doVerbFetch(Request req) throws IOException {
+		String channel = req.getAlphaNumQuery("c");
+		String tnode = req.getAlphaNumQuery("t");
+		
 		File chanDir = new File(new File("data"), channel);
 		File tnodeFile = new File(chanDir, tnode);
 		return ReadWholeFile(tnodeFile);
 	}
 
-	public String doVerbCreate(String channel, String tnode, String value,
-			String user) throws IOException {
-		if (channel == null) {
-			throw new RuntimeException("NULL CHANNEL!");
-		}
-		if (tnode == null) {
-			throw new RuntimeException("NULL TNODE!");
-		}
-		if (value == null) {
-			throw new RuntimeException("NULL VALUE!");
-		}
+	public String doVerbCreate(Request req) throws IOException {
+		String channel = req.getAlphaNumQuery("c");
+		String tnode = req.getAlphaNumQuery("t");
+		String value = req.getAlphaNumQuery("value");
 
 		File chanDir = new File(new File("data"), channel);
 		chanDir.mkdirs();
@@ -112,25 +103,15 @@ public class StoreServer extends BaseServer {
 		return "OK";
 	}
 	
-	public String doVerbBoot() throws IOException {
+	public String doVerbBoot(Request req) throws IOException {
 		String z = "BOOTING: ";
-		z += " # " + doVerbCreate("777", "101", "first", "nobody");
-		z += " # " + doVerbCreate("777", "102", "second", "nobody");
-		z += " # " + doVerbCreate("777", "103", "third", "nobody");
-		z += " # " + doVerbCreate("888", "104", "fourth", "nobody");
-		z += " # " + doVerbCreate("888", "105", "fifth", "nobody");
+		
+		z += " # " + doVerbCreate(new Request("c=777&t=101&value=first"));
+		z += " # " + doVerbCreate(new Request("c=777&t=102&value=second"));
+		z += " # " + doVerbCreate(new Request("c=777&t=103&value=third"));
+		z += " # " + doVerbCreate(new Request("c=888&t=104&value=fourth"));
+		z += " # " + doVerbCreate(new Request("c=888&t=105&value=fifth"));
+		
 		return z + "\n\n... BOOTED.";
-	}
-	
-	public void checkName(String s) {
-		final int n = s.length();
-		for (int i = 0; i < n; i++) {
-			char c = s.charAt(i);
-			if ('0' <= c && c <= '9') continue;
-			if ('a' <= c && c <= 'z') continue;
-			if ('A' <= c && c <= 'Z') continue;
-			if (c == '_') continue;
-			throw Bad("BAD CHAR %d", c);
-		}
 	}
 }

@@ -27,7 +27,6 @@ public abstract class BaseServer extends Yak implements Runnable {
 		try {
 			final ServerSocket serverSocket = new ServerSocket(port);
 			System.err.println("Listening on port " + port);
-			// Log.i("BaseServer", fmt("%s Listening on port %s", this, port));
 			while (true) {
 				final Socket clientSocket = serverSocket.accept();
 
@@ -85,16 +84,21 @@ public abstract class BaseServer extends Yak implements Runnable {
 		String contentType;
 		int contentLength; // Length in bytes, not chars.
 		char[] content; // TODO: Should be byte[]
+		
+		public Request(String fakeRequest) {
+			parseQueryPieces(fakeRequest);
+		}
 
 		public Request(BufferedReader reader) throws IOException {
 			// TODO -- BROKEN -- byte vs char probs. Might break on non-ASCII.
 			String line0 = reader.readLine();
+			System.err.println("GOT: " + line0);
 
 			HashMap<String, String> headers = new HashMap<String, String>();
 			String key = "None";
 			String s;
 			while ((s = reader.readLine()) != null) {
-				System.err.println("GOT: " + s);
+				System.err.println("Got: " + s);
 				if (s.length() == 0) {
 					break;
 				}
@@ -113,8 +117,10 @@ public abstract class BaseServer extends Yak implements Runnable {
 			String contentLenStr = headers.get("content-length");
 			contentLength = 0;
 
-			if (contentType != null && contentType.trim().toLowerCase()
-					.equals("application/x-www-form-urlencoded")) {
+			// We only care about application/x-www-form-urlencoded, for now.
+			if (contentType != null
+					&& contentType.trim().toLowerCase()
+							.equals("application/x-www-form-urlencoded")) {
 				contentLength = Integer.parseInt(contentLenStr.trim());
 			}
 
@@ -132,26 +138,53 @@ public abstract class BaseServer extends Yak implements Runnable {
 			path = pathAndQuery[0].substring(1).split("/");
 
 			if (pathAndQuery.length == 2) {
-				for (String queryPiece : pathAndQuery[1].split("\\&")) {
-					String[] kv = queryPiece.split("=", 2);
-					if (kv.length == 2) {
-						this.query.put(UrlDecode(kv[0]), UrlDecode(kv[1]));
-					}
+				parseQueryPieces(pathAndQuery[1]);
+			}
+
+			if (contentLength > 0) {
+				content = new char[contentLength];
+				int countToGO = contentLength;
+				while (countToGO > 0) {
+					// TODO: Use byte[] not char[].
+					countToGO -= reader.read(content,
+							contentLength - countToGO, countToGO);
+				}				
+				parseQueryPieces(new String(content));
+			}
+			
+			System.err.println(fmt("PATH : %s", Show(path)));
+			for (String q : this.query.keySet()) {
+				System.err.println(fmt("QUERY : %s -> %s", CurlyEncode(q), CurlyEncode(query.get(q))));
+			}
+		}
+
+		public void parseQueryPieces(String queryString) {
+			for (String queryPiece : queryString.split("\\&")) {
+				String[] kv = queryPiece.split("=", 2);
+				if (kv.length == 2) {
+					this.query.put(UrlDecode(kv[0]), UrlDecode(kv[1]));
 				}
 			}
+		}
 
-			content = new char[contentLength];
-			int countToGO = contentLength;
-			while (countToGO > 0) {
-				// TODO: Use byte[] not char[].
-				countToGO -= reader.read(content, contentLength - countToGO,
-						countToGO);
+		public String getQuery(String q) {
+			String z = query.get(q);
+			if (z == null) {
+				throw Bad("Missing getQuery: %s", q);
 			}
-
-			System.err.println("CONTENT: " + CurlyEncode(new String(content)));
+			return z;
+		}
+		public String getAlphaNumQuery(String q) {
+			String z = getQuery(q);
+			if (isAlphaNum(z)) {
+				return z;
+			} else {
+				Bad("Bad getAlphaNumQuery: %s -> %s", CurlyEncode(q), CurlyEncode(z));
+			}
+			return z;
 		}
 	}
-
+ 
 	public static class Response extends Yak {
 		int responseCode = 200;
 		String contentType = "text/html";

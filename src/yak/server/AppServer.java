@@ -14,38 +14,47 @@ import yak.etc.Yak;
 
 public class AppServer extends BaseServer {
 	
-	public static final int DEFAULT_PORT = 30333;
+	public static final int DEFAULT_PORT = 4004;
+	private String magicWord;
 	
 	public static void main(String[] args) {
 		try {
-			// Run StoreServer in background.
-			new Thread(new StoreServer(30333, "MagicYak")).start();
-			
-			// Run TheSerer in main thread.
-			new AppServer(DEFAULT_PORT).run();
-			// "Boot" initialize the storage.
+			if (args.length != 1) {
+				throw Bad("StoreServer needs one arg, the magic word: ", Show(args));
+			}
+			String magicWord = args[0];
+			if (!(isAlphaNum(magicWord))) {
+				throw Bad("magicWord must be alphaNum.");
+			}
+
+			new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magicWord)).start();
+
 			Thread.sleep(1 * 1000); // Wait 1 sec, first.
-			ReadUrl(fmt("http://localhost:%d/MagicYak?f=boot", StoreServer.DEFAULT_PORT));
+			ReadUrl(fmt("http://localhost:%d/%s?f=boot", StoreServer.DEFAULT_PORT, magicWord));
+			
+			new AppServer(DEFAULT_PORT, magicWord).run();
 		} catch (Exception e) {
 			System.err.println("CAUGHT: " + e);
 			e.printStackTrace();
 		}
 	}
 
-	public AppServer(int port) {
+	public AppServer(int port, String magicWord) {
 		super(port);
-		// Log.i("AppServer", fmt("AppServer Constructed on port %s", port));
+		this.magicWord = magicWord;
+		System.err.println(fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, magicWord));
 	}
 
 	public Response handleRequest(Request req) {
+		Say("AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
 		
-		String z = "{REQ PATH=" + Show(req.path) + " QUERY=" + Show(req.query)
-				+ "}";
-		System.err.println(z);
-
 		if (req.path[0].equals("favicon.ico")) {
 			return new Response("No favicon.ico here.", 404, "text/plain");
 		}
+		if (!(req.path[0].equals(magicWord))) {
+			throw Bad("Bad Magic Word: (%s) %s", magicWord, Show(req.path));
+		}
+
 
 		String uri = req.query.get("uri");
 		String verb = req.query.get("f");
@@ -55,6 +64,7 @@ public class AppServer extends BaseServer {
 		String latest = req.query.get("latest");
 		String value = req.query.get("value");
 		verb = (verb == null) ? "null" : verb;
+		String z = "!";
 
 		try {
 			if (verb.equals("boot")) {
@@ -68,7 +78,7 @@ public class AppServer extends BaseServer {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			return new Response("ERROR:\r\n" + e.getMessage(), 200,
+			return new Response("!\r\nERROR:\r\n" + e.getMessage(), 200,
 					"text/plain");
 		}
 

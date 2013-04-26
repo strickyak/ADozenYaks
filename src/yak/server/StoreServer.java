@@ -8,6 +8,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.Date;
+import java.util.HashMap;
 
 import yak.etc.BaseServer;
 
@@ -16,6 +18,7 @@ public class StoreServer extends BaseServer {
 	public static final String DEFAULT_HOST = "yak.net";
 	
 	public String magicWord;
+	public Rendez rendez = new Rendez();
 
 	public static void main(String[] args) throws IOException {
 		System.err.println("Hello, StoreServer! ");
@@ -32,9 +35,12 @@ public class StoreServer extends BaseServer {
 	public StoreServer(int port, String magicWord) {
 		super(port);
 		this.magicWord = magicWord;
+		System.err.println(fmt("Hello, this is StoreServer on %d with %s", DEFAULT_PORT, magicWord));
 	}
 
 	public Response handleRequest(Request req) {
+		Say("StoreServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
+		
 		if (req.path[0].equals("favicon.ico")) {
 			return new Response("No favicon.ico here.", 404, "text/plain");
 		}
@@ -55,6 +61,8 @@ public class StoreServer extends BaseServer {
 				z = doVerbCreate(req);
 			} else if (verb.equals("boot")) {
 				z = doVerbBoot(req);
+			} else if (verb.equals("rendez")) {
+				z = doVerbRendez(req);
 			} else {
 				throw Bad("Bad verb: " + verb);
 			}
@@ -113,5 +121,79 @@ public class StoreServer extends BaseServer {
 		z += " # " + doVerbCreate(new Request("c=888&t=105&value=fifth"));
 		
 		return z + "\n\n... BOOTED.";
+	}
+	
+	public String doVerbRendez(Request req) throws IOException {
+		String me = req.getAlphaNumQuery("me");
+		String you = req.getAlphaNumQuery("you");
+		String value = req.getAlphaNumQuery("value");
+		Rendez.Card theirs = rendez.waitForPeer(me, you, value);
+		if (theirs == null) {
+			return "!";  // Indicate failure.
+		} else {
+			return theirs.value;
+		}
+	}
+	
+	public static class Rendez {
+		// Try: http://yak.net:30332/MagicYak?f=rendez&me=111&you=222&value=one
+		// And: http://yak.net:30332/MagicYak?f=rendez&me=222&you=111&value=two
+		public static class Card {
+			public String me;
+			public String you;
+			public String value;
+			public long timeout;
+		}
+
+		public Card waitForPeer(String me, String you, String value) {
+			collectGarbage();
+			Card mine = new Card();
+			mine.me = me;
+			mine.you = you;
+			mine.value = value;
+			mine.timeout = new Date().getTime() + 60*1000;
+			put(mine);
+			for (int i = 0; i < 15; i++) {
+				try {
+					Thread.sleep(1*1000);
+				} catch (InterruptedException e) {
+					throw Bad("waitForPeer interruption: %s", e);
+				}
+				Card theirs = get(you, me);
+				if (theirs != null) {
+					return theirs;
+				}
+			}
+			return null;
+		}
+
+		private HashMap<String, Card> peers = new HashMap<String, Card>();
+		
+		private synchronized void put(Card card) {
+			Say("PUT CARD timeout=%d me=%s you=%s value=%s", card.timeout, card.me, card.you, card.value);
+			peers.put(card.me + " " + card.you, card);
+		}
+		
+		private synchronized Card get(String me, String you) {
+			Card z =  peers.get(me + " " + you);
+			if (z == null) {
+				Say("GET CARD (%s %s) -> NULL", me, you);
+			} else {
+				Say("GET CARD timeout=%d me=%s you=%s value=%s", z.timeout, z.me, z.you, z.value);
+			}
+			return z;
+		}
+		
+		private synchronized void collectGarbage() {
+			long now = new Date().getTime();
+			Say("GC at %d", now);
+			for (String key : peers.keySet()) {
+				Card card = peers.get(key);
+				Say("... CARD timeout=%d me=%s you=%s value=%s", card.timeout - now, card.me, card.you, card.value);
+				if (card.timeout < now) {
+					peers.remove(key);
+				}
+			}
+		}
 	}
 }

@@ -362,4 +362,8 @@ public abstract class Yak {
 	public static RuntimeException Bad(String msg, Object... args) {
 		return new RuntimeException("BAD { " + fmt(msg, args) + " }");
 	}
+	
+	public static void Say(String msg, Object... args) {
+		System.err.println(fmt("## " + msg, args));
+	}
 }

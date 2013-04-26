@@ -93,6 +93,9 @@ public abstract class BaseServer extends Yak implements Runnable {
 			// TODO -- BROKEN -- byte vs char probs. Might break on non-ASCII.
 			String line0 = reader.readLine();
 			System.err.println("GOT: " + line0);
+			if (line0 == null) {
+				return;  // TODO: WHEN DOES THIS OCCUR?
+			}
 
 			HashMap<String, String> headers = new HashMap<String, String>();
 			String key = "None";

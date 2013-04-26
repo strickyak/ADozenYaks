@@ -73,7 +73,7 @@ public class Yak12Activity extends Activity {
 
 		// Start embedded App Server, if it is not yet started.
 		if (serverThread == null) {
-			server = new AppServer(AppServer.DEFAULT_PORT);
+			server = new AppServer(AppServer.DEFAULT_PORT, "MagicYak");
 			serverThread = new Thread(server);
 			serverThread.start();
 			// ??// Yak.sleepSecs(0.333);

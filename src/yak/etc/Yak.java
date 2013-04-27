@@ -383,4 +383,7 @@ public abstract class Yak {
 	public static void Say(String msg, Object... args) {
 		System.err.println(fmt("## " + msg, args));
 	}
+
+	public static void DontSay(String msg, Object... args) {
+	}
 }

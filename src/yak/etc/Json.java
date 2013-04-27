@@ -97,11 +97,49 @@ public class Json extends Yak {
 			step();
 			StringBuilder sb = new StringBuilder();
 			while (true) {
-				final char c = (char) bb[p];
+				char c = (char) bb[p];
 				if (c == '"') {
 					break;
 				}
-				// TODO: escape sequences.
+				if (c == '\\') {
+					step();
+					final char d = (char) bb[p];
+					switch (d) {
+					case '"':
+					case '\\':
+					case '/':
+						c = d;
+						break;
+					case 'n':
+						c = '\n';
+						break;
+					case 'r':
+						c = '\r';
+						break;
+					case 'b':
+						c = '\b';
+						break;
+					case 'f':
+						c = '\f';
+						break;
+					case 't':
+						c = '\t';
+						break;
+					case 'u':
+						step();
+						int h1 = ValueOfHexChar((char) bb[p]);
+						step();
+						int h2 = ValueOfHexChar((char) bb[p]);
+						step();
+						int h3 = ValueOfHexChar((char) bb[p]);
+						step();
+						int h4 = ValueOfHexChar((char) bb[p]);
+						c = (char) ((h1 << 12) | (h2 << 8) | (h3 << 4) | h4);
+						break;
+					default:
+						throw Bad("Backslash Escape %d", (int) d);
+					}
+				}
 				sb.append(c);
 				step();
 			}

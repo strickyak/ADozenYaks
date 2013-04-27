@@ -138,6 +138,7 @@ public class StoreServer extends BaseServer {
 	public static class Rendez {
 		// Try: http://yak.net:30332/MagicYak?f=rendez&me=111&you=222&value=one
 		// And: http://yak.net:30332/MagicYak?f=rendez&me=222&you=111&value=two
+		// $ cd ADozenYaks;  java  -classpath $PWD/bin/classes  yak.server.AppServer  MagicYak
 		public static class Card {
 			public String me;
 			public String you;

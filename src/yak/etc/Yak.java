@@ -17,17 +17,17 @@ import java.util.HashMap;
 import java.util.regex.Pattern;
 
 public abstract class Yak {
-	
+
 	public static byte[] LongToBlock16(long a) {
 		byte[] z = new byte[16];
-		z[0] = (byte)a;
-		z[1] = (byte)(a >>> 8);
-		z[2] = (byte)(a >>> 16);
-		z[3] = (byte)(a >>> 24);
-		z[4] = (byte)(a >>> 32);
-		z[5] = (byte)(a >>> 40);
-		z[6] = (byte)(a >>> 48);
-		z[7] = (byte)(a >>> 56);
+		z[0] = (byte) a;
+		z[1] = (byte) (a >>> 8);
+		z[2] = (byte) (a >>> 16);
+		z[3] = (byte) (a >>> 24);
+		z[4] = (byte) (a >>> 32);
+		z[5] = (byte) (a >>> 40);
+		z[6] = (byte) (a >>> 48);
+		z[7] = (byte) (a >>> 56);
 		return z;
 	}
 
@@ -45,11 +45,10 @@ public abstract class Yak {
 	}
 
 	/** Bytes of String, allowing only 8-bit (Latin1) chars */
-	public byte[] StringToBytes(String a) {
-		// return a.getBytes("iso-8859-1");
+	public static byte[] StringToBytes(String a) {
 		final int n = a.length();
-		byte[] bytes = new byte[2*n];
-		for (int i=0; i<n; i++) {
+		byte[] bytes = new byte[n];
+		for (int i = 0; i < n; i++) {
 			char c = a.charAt(i);
 			byte b = (byte) c;
 			if (b != c) {
@@ -59,10 +58,10 @@ public abstract class Yak {
 		}
 		return bytes;
 	}
-	
+
 	public static void sleepSecs(double secs) {
 		try {
-			Thread.sleep((long)(secs * 1000) /*ms*/);
+			Thread.sleep((long) (secs * 1000) /* ms */);
 		} catch (InterruptedException e) {
 			// pass.
 		}
@@ -71,16 +70,16 @@ public abstract class Yak {
 	public static String BytesToString(byte[] bytes) {
 		final int n = bytes.length;
 		char[] chars = new char[n];
-		for (int i=0; i<n; i++) {
+		for (int i = 0; i < n; i++) {
 			chars[i] = (char) bytes[i];
 		}
 		return String.valueOf(chars);
 	}
-	
+
 	public static String CharsToString(char[] chars) {
 		return String.valueOf(chars);
 	}
-	
+
 	public static String UrlDecode(String s) {
 		StringBuffer sb = new StringBuffer();
 		final int n = s.length();
@@ -125,30 +124,28 @@ public abstract class Yak {
 		}
 		return sb.toString();
 	}
-	
-	public static char[] HexChars = {
-		'0', '1', '2', '3', '4', '5', '6', '7',
-		'8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
-	};
-	
+
+	public static char[] HexChars = { '0', '1', '2', '3', '4', '5', '6', '7',
+			'8', '9', 'a', 'b', 'c', 'd', 'e', 'f', };
+
 	public static String HexEncode(byte[] bytes) {
 		final int n = bytes.length;
-		char[] chars = new char[2*n];
+		char[] chars = new char[2 * n];
 		for (int i = 0; i < n; i++) {
 			final byte b = bytes[i];
-			chars[2*i] = HexChars[(b >> 4) & 15];
-			chars[2*i+1] = HexChars[b & 15];
+			chars[2 * i] = HexChars[(b >> 4) & 15];
+			chars[2 * i + 1] = HexChars[b & 15];
 		}
 		return CharsToString(chars);
 	}
-	
+
 	public static byte[] HexDecode(String a) {
 		final int n = a.length() / 2;
 		byte[] z = new byte[n];
 		for (int i = 0; i < n; i++) {
-			int p = ValueOfHexChar(a.charAt(2*i));
-			int q = ValueOfHexChar(a.charAt(2*i+1));
-			z[i] = (byte)((p << 4) | q);
+			int p = ValueOfHexChar(a.charAt(2 * i));
+			int q = ValueOfHexChar(a.charAt(2 * i + 1));
+			z[i] = (byte) ((p << 4) | q);
 		}
 		return z;
 	}
@@ -169,6 +166,16 @@ public abstract class Yak {
 		sb.append("{arr ");
 		for (int i = 0; i < ss.length; i++) {
 			sb.append("[" + i + "]= " + CurlyEncode(ss[i]) + " ");
+		}
+		sb.append("}");
+		return sb.toString();
+	}
+
+	public static String Show(byte[] bb) {
+		StringBuffer sb = new StringBuffer();
+		sb.append(fmt("{bytes*%d ", bb.length));
+		for (int i = 0; i < bb.length; i++) {
+			sb.append(fmt("%d ", (int) bb[i]));
 		}
 		sb.append("}");
 		return sb.toString();
@@ -197,9 +204,15 @@ public abstract class Yak {
 	public static String ReadWholeFile(File f) throws IOException {
 		BufferedReader r = new BufferedReader(new InputStreamReader(
 				new FileInputStream(f)));
-		String z = r.readLine();
+		StringBuffer sb = new StringBuffer();
+		while (true) {
+			String s = r.readLine();
+			if (s==null) break;
+			sb.append(s);
+			sb.append('\n');
+		}
 		r.close();
-		return z;
+		return sb.toString();
 	}
 
 	public static void WriteWholeFile(File f, String value) throws IOException {
@@ -345,15 +358,19 @@ public abstract class Yak {
 			return z;
 		}
 	}
-	
+
 	public static boolean isAlphaNum(String s) {
 		final int n = s.length();
 		for (int i = 0; i < n; i++) {
 			char c = s.charAt(i);
-			if ('0' <= c && c <= '9') continue;
-			if ('a' <= c && c <= 'z') continue;
-			if ('A' <= c && c <= 'Z') continue;
-			if (c == '_') continue;
+			if ('0' <= c && c <= '9')
+				continue;
+			if ('a' <= c && c <= 'z')
+				continue;
+			if ('A' <= c && c <= 'Z')
+				continue;
+			if (c == '_')
+				continue;
 			return false;
 		}
 		return true;
@@ -362,7 +379,7 @@ public abstract class Yak {
 	public static RuntimeException Bad(String msg, Object... args) {
 		return new RuntimeException("BAD { " + fmt(msg, args) + " }");
 	}
-	
+
 	public static void Say(String msg, Object... args) {
 		System.err.println(fmt("## " + msg, args));
 	}

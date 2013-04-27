@@ -1,5 +1,7 @@
 package yak.server;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 
 import yak.etc.Yak;
@@ -103,6 +105,16 @@ public class Profile extends Yak {
 
 			void unmarshal(JSONObject j) throws JSONException {
 				//pName = j.getString("name");
+			}
+		}
+		public static void main(String[] a) {
+			String filename = a[0];
+			try {
+			String s = ReadWholeFile(new File(filename));
+			JSONObject json = new JSONObject(s);
+			Profile prof = new Profile(json);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 }

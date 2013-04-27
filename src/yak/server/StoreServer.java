@@ -197,4 +197,18 @@ public class StoreServer extends BaseServer {
 			}
 		}
 	}
+	
+	public static class Sessions {
+		HashMap<String, Session> dict = new HashMap<String, Session>();
+		public synchronized Session get(String key) {
+			return dict.get(key);
+		}
+		public synchronized void put(String key, Session ses) {
+			dict.put(key, ses);
+		}
+	}
+
+	public static class Session {
+		public Profile.Self self;
+	}
 }

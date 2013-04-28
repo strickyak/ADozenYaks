@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 
 import android.util.Log;
 
@@ -46,6 +47,7 @@ public class AppServer extends BaseServer {
 	}
 
 	public Response handleRequest(Request req) {
+		Say("Req %s", req);
 		Say("AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
 		
 		if (req.path[0].equals("favicon.ico")) {
@@ -114,7 +116,23 @@ public class AppServer extends BaseServer {
 	}
 	
 	public String UseStore(String verb, String args) throws IOException {
-		return ReadUrl(fmt("http://%s:%s/MagicYak?f=%s&%s",
-				StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT, verb, args));
+		return ReadUrl(fmt("http://%s:%s/%s?f=%s&%s",
+				StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT, magicWord, verb, args));
+	}
+	
+
+	
+	public static class Sessions {
+		HashMap<String, Session> dict = new HashMap<String, Session>();
+		public synchronized Session get(String key) {
+			return dict.get(key);
+		}
+		public synchronized void put(String key, Session ses) {
+			dict.put(key, ses);
+		}
+	}
+
+	public static class Session {
+		public Profile.Self self;
 	}
 }

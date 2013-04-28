@@ -180,6 +180,14 @@ public class Json extends Yak {
 				Say("Step EOS");
 			}
 		}
+		
+		public String takeStringValue() {
+			advance();
+			Must(token == 's');
+			String z = str;
+			advance();
+			return z;
+		}
 	}
 
 	public static void main(String[] a) {

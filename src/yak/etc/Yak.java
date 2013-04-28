@@ -386,4 +386,20 @@ public abstract class Yak {
 
 	public static void DontSay(String msg, Object... args) {
 	}
+
+	public static void Must(boolean cond, String msg, Object... args) {
+		if (!(cond)) {
+			throw Bad("Must Failed: " + msg, args);
+		}
+	}
+	public static void Must(boolean cond) {
+		if (!(cond)) {
+			throw Bad("Must Failed.");
+		}
+	}
+	public static void Must(boolean cond, Object x) {
+		if (!(cond)) {
+			throw Bad("Must Failed: %s", x);
+		}
+	}
 }

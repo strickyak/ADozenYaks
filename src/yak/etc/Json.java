@@ -182,9 +182,10 @@ public class Json extends Yak {
 		}
 		
 		public String takeStringValue() {
-			Must(token == 's');
+			Must(token == 's', token);
 			String z = str;
 			advance();
+			Say("takeStringValue -> (%s)", z);
 			return z;
 		}
 	}

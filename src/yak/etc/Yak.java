@@ -399,7 +399,7 @@ public abstract class Yak {
 	}
 	public static void Must(boolean cond, Object x) {
 		if (!(cond)) {
-			throw Bad("Must Failed: %s", x);
+			throw Bad("Must Failed: (%s)", x);
 		}
 	}
 }

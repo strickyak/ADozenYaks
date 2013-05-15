@@ -25,7 +25,7 @@ public class Profile extends Yak {
 			if (key == "name") {
 				this.name = j.takeStringValue();
 			} else {
-				Bad("json key %s", key);
+				Bad("json key (%s)", key);
 			}
 		}
 
@@ -36,7 +36,9 @@ public class Profile extends Yak {
 				Must(j.token == 's', j.token);
 				String key = j.str;
 				j.advance();
+				Say("BEGIN { unmarshal: (%s)", key);
 				unmarshalField(j, key);
+				Say("} END unmarshal: (%s)", key);
 			}
 			j.advance();
 		}
@@ -138,7 +140,7 @@ public class Profile extends Yak {
 				while (j.token != ']') {
 					Member member = new Member(j);
 					if (members.containsKey(member.name)) {
-						throw Bad("Already contains member <%s>", member.name);
+						throw Bad("Room (%s) lready contains member (%s)", name, member.name);
 					}
 					members.put(member.name, member);
 				}

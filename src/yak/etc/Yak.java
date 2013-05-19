@@ -150,7 +150,18 @@ public abstract class Yak {
 		return z;
 	}
 
-	public static String Show(HashMap<String, String> map) {
+	public static String Show(HashMap map) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("{map ");
+		for (Object k : map.keySet()) {
+			sb.append("[ " + CurlyEncode(k.toString()) + " ]= " + CurlyEncode(map.get(k).toString())
+					+ " ");
+		}
+		sb.append("}");
+		return sb.toString();
+	}
+
+	public static String XXXXXXXXXXXXXXXXShow(HashMap<String, String> map) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("{map ");
 		for (String k : map.keySet()) {

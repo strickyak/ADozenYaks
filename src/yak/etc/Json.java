@@ -1,6 +1,7 @@
 package yak.etc;
 
 import java.io.File;
+import java.util.HashMap;
 
 import org.json.JSONObject;
 
@@ -188,6 +189,55 @@ public class Json extends Yak {
 			Say("takeStringValue -> (%s)", z);
 			return z;
 		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static String Show(HashMap map) {
+		if (map == null) {
+			return "null";
+		}
+		StringBuffer sb = new StringBuffer();
+		sb.append("{");
+		for (Object k : map.keySet()) {
+			sb.append(fmt(" %s: %s,\n", Quote(k.toString()), Quote(map.get(k).toString())));
+		}
+		sb.append("}\n");
+		return sb.toString();
+	}
+	
+	public static String Quote(String s) {
+		if (s == null) {
+			return "null";
+		}
+		StringBuilder sb = new StringBuilder("\"");
+		final int n = s.length();
+		for (int i = 0; i < n; i++) {
+			char c = s.charAt(i);
+			switch (c) {
+			case '\"':
+				sb.append("\\\"");
+			case '\\':
+				sb.append("\\\\");
+			case '\b':
+				sb.append("\\b");
+			case '\f':
+				sb.append("\\f");
+			case '\n':
+				sb.append("\\n");
+			case '\r':
+				sb.append("\\r");
+			case '\t':
+				sb.append("\\t");
+			default:
+				if (' ' <= c && c <= '~') {
+					sb.append(c);
+				} else {
+					sb.append(fmt("\\u%04x", (int) c));
+				}
+			}
+		}
+		sb.append("\"");
+		return sb.toString();
 	}
 
 	public static void main(String[] a) {

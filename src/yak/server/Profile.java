@@ -1,8 +1,6 @@
 package yak.server;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.Serializable;
 import java.util.HashMap;
 
 import yak.etc.Json;
@@ -22,10 +20,12 @@ public class Profile extends Yak {
 		}
 
 		void unmarshalField(Json.Parser j, String key) {
-			if (key == "name") {
+			if (key.equals("_")) {
+				;  // Ignore the "_" keys.
+			} else if (key.equals("name")) {
 				this.name = j.takeStringValue();
 			} else {
-				Bad("json key (%s)", key);
+				throw Bad("json key (%s) for %s", key, this.getClass().getName());
 			}
 		}
 
@@ -36,11 +36,19 @@ public class Profile extends Yak {
 				Must(j.token == 's', j.token);
 				String key = j.str;
 				j.advance();
-				Say("BEGIN { unmarshal: (%s)", key);
+				Say("BEGIN { unmarshalField: (%s) <= %s", key, this);
 				unmarshalField(j, key);
-				Say("} END unmarshal: (%s)", key);
+				Say("} END unmarshalField: (%s) => %s", key, this);
 			}
 			j.advance();
+		}
+		
+		String innerJson() {
+			return fmt(" \"_\": %s,  \"name\": %s, ", Json.Quote(this.getClass().getName()), Json.Quote(name));
+		}
+		@Override
+		public String toString() {
+			return fmt("{ %s }\n", innerJson());
 		}
 	}
 
@@ -54,16 +62,21 @@ public class Profile extends Yak {
 
 		@Override
 		void unmarshalField(Json.Parser j, String key) {
-
-			if (j.str == "dhpub") {
+			if (key.equals("dhpub")) {
 				this.dhpub = j.takeStringValue();
-			} else if (j.str == "hub") {
+			} else if (key.equals("hub")) {
 				this.hub = j.takeStringValue();
 			} else {
 				super.unmarshalField(j, key);
 			}
 		}
-
+		@Override
+		String innerJson() {
+			return super.innerJson() + fmt(
+					" \"dhpub\": %s, \"hub\": %s, ",
+					Json.Quote(dhpub),
+					Json.Quote(hub));
+		}
 	}
 
 	public static class Friend extends Member {
@@ -77,9 +90,9 @@ public class Profile extends Yak {
 
 		@Override
 		void unmarshalField(Json.Parser j, String key) {
-			if (j.str == "dhmut") {
+			if (j.str.equals("dhmut")) {
 				this.dhmut = j.takeStringValue();
-			} else if (key == "rooms") {
+			} else if (key.equals("rooms")) {
 				Must(j.token == '[', j.token);
 				j.advance();
 				while (j.token != ']') {
@@ -94,7 +107,13 @@ public class Profile extends Yak {
 				super.unmarshalField(j, key);
 			}
 		}
-
+		@Override
+		String innerJson() {
+			return super.innerJson() + fmt(
+					" \"dhmut\": %s, \"rooms\": %s, ",
+					Json.Quote(dhmut),
+					Json.Show(rooms));
+		}
 	}
 
 	public static class Self extends Friend {
@@ -107,13 +126,15 @@ public class Profile extends Yak {
 
 		@Override
 		void unmarshalField(Json.Parser j, String key) {
-			if (key == "dhsec") {
+			if (key.equals("dhsec")) {
 				this.dhsec = j.takeStringValue();
-			} else if (key == "friends") {
+			} else if (key.equals("friends")) {
 				Must(j.token == '[', j.token);
 				j.advance();
 				while (j.token != ']') {
 					Friend friend = new Friend(j);
+					Say("friend = %s", friend);
+					Say("friends = %s", Json.Show(friends));
 					if (friends.containsKey(friend.name)) {
 						throw Bad("Already contains friend <%s>", friend.name);
 					}
@@ -122,6 +143,13 @@ public class Profile extends Yak {
 			} else {
 				super.unmarshalField(j, key);
 			}
+		}
+		@Override
+		String innerJson() {
+			return super.innerJson() + fmt(
+					" \"dhsec\": %s, \"friends\": %s, ",
+					Json.Quote(dhsec),
+					Json.Show(friends));
 		}
 	}
 
@@ -134,7 +162,7 @@ public class Profile extends Yak {
 
 		@Override
 		void unmarshalField(Json.Parser j, String key) {
-			if (key == "members") {
+			if (key.equals("members")) {
 				Must(j.token == '[', j.token);
 				j.advance();
 				while (j.token != ']') {
@@ -147,6 +175,12 @@ public class Profile extends Yak {
 			} else {
 				super.unmarshalField(j, key);
 			}
+		}
+		@Override
+		String innerJson() {
+			return super.innerJson() + fmt(
+					" \"members\": %s, ",
+					Json.Show(members));
 		}
 	}
 

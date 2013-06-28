@@ -168,7 +168,7 @@ public class Profile extends Yak {
 				while (j.token != ']') {
 					Member member = new Member(j);
 					if (members.containsKey(member.name)) {
-						throw Bad("Room (%s) lready contains member (%s)", name, member.name);
+						throw Bad("Room (%s) already contains member (%s)", name, member.name);
 					}
 					members.put(member.name, member);
 				}

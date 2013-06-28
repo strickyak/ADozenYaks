@@ -170,21 +170,21 @@ public abstract class BaseServer extends Yak implements Runnable {
 			}
 		}
 
-		public String getQuery(String q) {
+		public String mustGetQuery(String q) {
 			String z = query.get(q);
 			if (z == null) {
 				throw Bad("Missing getQuery: %s", q);
 			}
 			return z;
 		}
-		public String getAlphaNumQuery(String q) {
-			String z = getQuery(q);
-			if (isAlphaNum(z)) {
+		public String mustGetAlphaNumQuery(String q) {
+			String z = mustGetQuery(q);
+			if (IsAlphaNum(z)) {
 				return z;
 			} else {
 				Bad("Bad getAlphaNumQuery: %s -> %s", CurlyEncode(q), CurlyEncode(z));
+				return "";  // NOTREACHED
 			}
-			return z;
 		}
 	}
  

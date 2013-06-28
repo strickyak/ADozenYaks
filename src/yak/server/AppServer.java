@@ -9,6 +9,7 @@ import java.util.HashMap;
 import android.util.Log;
 
 import yak.etc.BaseServer;
+import yak.etc.DH;
 import yak.etc.BaseServer.Request;
 import yak.etc.BaseServer.Response;
 import yak.etc.Yak;
@@ -17,14 +18,15 @@ public class AppServer extends BaseServer {
 	
 	public static final int DEFAULT_PORT = 4004;
 	private String magicWord;
+	private String storagePath;
 	
 	public static void main(String[] args) {
 		try {
 			if (args.length != 1) {
-				throw Bad("StoreServer needs one arg, the magic word: ", Show(args));
+				throw Bad("AppServer needs one arg, the magic word: ", Show(args));
 			}
 			String magicWord = args[0];
-			if (!(isAlphaNum(magicWord))) {
+			if (!(IsAlphaNum(magicWord))) {
 				throw Bad("magicWord must be alphaNum.");
 			}
 
@@ -57,9 +59,21 @@ public class AppServer extends BaseServer {
 			throw Bad("Bad Magic Word: (%s) %s", magicWord, Show(req.path));
 		}
 
-
-		String uri = req.query.get("uri");
 		String verb = req.query.get("f");
+		
+		String path = req.query.get("path");
+		if (path != null) {
+			while (path.length() > 0 && path.charAt(0) == '/') {
+				path = path.substring(1);
+			}
+			verb = path;
+		}
+		
+		String query = req.query.get("query");
+		if (query != null) {
+			req.parseQueryPieces(query);
+		}
+		
 		String user = req.query.get("u");
 		String channel = req.query.get("c");
 		String tnode = req.query.get("t");
@@ -69,12 +83,12 @@ public class AppServer extends BaseServer {
 		String z = "!";
 
 		try {
-			if (verb.equals("boot")) {
+			if (verb.equals("Boot")) {
 				z = doVerbBoot();
-			} else if (verb.equals("chan")) {
+			} else if (verb.equals("Chan")) {
 				z = doVerbChan(channel);
-			} else if (uri != null) {
-				z = doUri(uri);
+			} else if (verb.equals("Rendez")) {
+				z = doVerbRendez(req.query.get("mycode"), req.query.get("peercode"));
 			} else {
 				throw new Exception("bad Verb: " + verb);
 			}
@@ -89,6 +103,9 @@ public class AppServer extends BaseServer {
 
 	private String doUri(String uri) throws IOException {
 		String a = uri.toString();
+		if (a.startsWith("yak12:")) {
+			a = a.substring(6);
+		}
 		System.err.println("+++ doUri: <" + a);
 		String z = htmlEscape("URI IS " + CurlyEncode(a));
 		System.err.println("+++ doUri: >" + z);
@@ -96,7 +113,7 @@ public class AppServer extends BaseServer {
 	}
 
 	private String doVerbBoot() throws IOException {
-		return UseStore("boot", "");
+		return UseStore("Boot", "");
 	}
 
 	private String doVerbChan(String channel) throws IOException {
@@ -104,7 +121,7 @@ public class AppServer extends BaseServer {
 		String z = fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
 		z += "<br><dl>\n";
 		for (String t : tnodes) {
-			if (!(isAlphaNum(t))) {
+			if (!(IsAlphaNum(t))) {
 				throw Bad("listed tnode not alphanum: %s", Show(tnodes));
 			}
 			
@@ -115,12 +132,34 @@ public class AppServer extends BaseServer {
 		return z;
 	}
 	
-	public String UseStore(String verb, String args) throws IOException {
-		return ReadUrl(fmt("http://%s:%s/%s?f=%s&%s",
-				StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT, magicWord, verb, args));
+
+	private String doVerbRendez(String mycode, String peercode) throws IOException {
+		if (mycode == null) {
+			int myCode = DH.randomInt(89999) + 10000;
+			return "Your code is " + myCode + "<P> Enter friend's code: <BR>"
+					+ "<form method=GET action=/Rendez?mycode=" + myCode + ">"
+							+ "<input type=text name=peercode><br>"
+							+ "<input hidden name=mycode value=\"" + mycode + "\">"
+					+ "<input type=submit>"
+					+ "</form>";
+		}
+
+		return "TODO--doVerbRendez() my=" +mycode + " peer=" + peercode;
 	}
 	
-
+	public void setStoragePath(String storagePath) {
+		this.storagePath = storagePath;
+	}
+	
+	public String UseStore(String verb, String args) throws IOException {
+		if (storagePath.equals("")) {
+			return ReadUrl(fmt("http://%s:%s/%s?f=%s&%s",
+					StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT,
+					magicWord, verb, args));
+		} else {
+			return ReadUrl(fmt("%s?f=%s&%s", storagePath, verb, args));
+		}
+	}
 	
 	public static class Sessions {
 		HashMap<String, Session> dict = new HashMap<String, Session>();

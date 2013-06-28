@@ -1,14 +1,18 @@
 package yak.dozen;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.math.BigInteger;
 import java.net.URI;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
@@ -29,12 +33,12 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
-import android.text.InputType;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
@@ -56,9 +60,10 @@ public class Yak12Activity extends Activity {
 
 	static AppServer server;
 	static Thread serverThread;
+	static String appMagic = new Hash(DH.RandomKey().toString()).toString();
 
-	AppCaller appCaller = new AppCaller(Yak.fmt("http://localhost:%d/?",
-			AppServer.DEFAULT_PORT));;
+	AppCaller appCaller = new AppCaller(Yak.fmt("http://localhost:%d/%s?",
+			AppServer.DEFAULT_PORT, appMagic));;
 	Context yakContext = this;
 	Handler yakHandler = new Handler();
 	
@@ -73,10 +78,12 @@ public class Yak12Activity extends Activity {
 
 		// Start embedded App Server, if it is not yet started.
 		if (serverThread == null) {
-			server = new AppServer(AppServer.DEFAULT_PORT, "MagicYak");
+			server = new AppServer(AppServer.DEFAULT_PORT, appMagic);
 			serverThread = new Thread(server);
 			serverThread.start();
 			// ??// Yak.sleepSecs(0.333);
+			
+			initializeStoragePath();
 		}
 
 		Intent intent = getIntent();
@@ -88,7 +95,6 @@ public class Yak12Activity extends Activity {
 		try {
 			Log.i("antti", "PATH=" + path);
 			String[] words = path.split("/");
-			// Log.i("antti", "words.LEN=" + words.length);
 			String verb = "";
 			if (words.length > 1) {
 				verb = words[1];
@@ -99,6 +105,8 @@ public class Yak12Activity extends Activity {
 				handleDHDemo();
 			} else if (verb.equals("Channel777")) {
 				handleChannel777();
+			} else if (verb.equals("Config")) {
+				handleConfig();
 			} else if (verb.equals("")) {
 				handleDefault();
 			} else {
@@ -109,6 +117,15 @@ public class Yak12Activity extends Activity {
 			toast(e.toString());
 			displayText("handleYak12Intent CAUGHT EXCEPTION:\n\n"
 					+ e.toString());
+		}
+	}
+
+	public void initializeStoragePath() {
+		String storagePath = "";
+		try {
+			storagePath = readFile("config.txt");
+		} finally {
+			server.setStoragePath(storagePath);
 		}
 	}
 
@@ -135,8 +152,65 @@ public class Yak12Activity extends Activity {
 	}
 
 	private void handleDefault() {
-		displayList(new String[] { "One", "Two", "Three", "Channel",
+		displayList(new String[] { "Config", "One", "Two", "Three", "Channel",
 				"Rendezvous", "dhdemo", "Channel777", "Channel0", });
+	}
+
+	private void handleConfig() {
+		String text = "";
+		try {
+			text = readFile("config.txt");
+		} catch (Exception e) {
+			toast(e.toString());
+		}
+		if (text.equals("")) {
+			text = "http://";
+		}
+		AnEditView editor = new AnEditView(text) {
+			@Override
+			public void onSave(String newText) {
+				writeFile("config.txt", newText);
+				server.setStoragePath(newText);
+				toast("Saved Config");
+				startIntent("/", null);
+			}
+		};
+		setContentView(editor);
+	}
+	
+	private String readFile(String filename) {
+		try {
+			FileInputStream fis = openFileInput(filename);
+			InputStreamReader isr = new InputStreamReader(fis);
+			BufferedReader br = new BufferedReader(isr);
+			StringBuilder sb = new StringBuilder();
+			while (true) {
+				String line = br.readLine();
+				if (line == null)
+					break;
+				sb.append(line);
+			}
+			fis.close();
+			return sb.toString();
+		} catch (IOException e) {
+			throw new RuntimeException("Cannot readFile: " + filename, e);
+		}
+	}
+
+	private void writeFile(String filename, String content) {
+		try {
+			FileOutputStream fos = openFileOutput(filename,
+					Context.MODE_WORLD_READABLE | Context.MODE_WORLD_WRITEABLE);
+			PrintStream ps = new PrintStream(fos);
+			ps.print(content);
+			ps.flush();
+			ps.close();
+			if (ps.checkError()) {
+				throw new IOException("checkError is true");
+			}
+		} catch (IOException e) {
+			throw new RuntimeException("Cannot writeFile: " + filename, e);
+		}
 	}
 
 	// //////////////////////////////////////////////////
@@ -195,7 +269,7 @@ public class Yak12Activity extends Activity {
 		setContentView(v);
 	}
 
-	// Provides access to the App Server.
+	// Does HTTP GETs to the App Server.
 	public class AppCaller extends Yak {
 
 		String baseUrl;
@@ -204,12 +278,13 @@ public class Yak12Activity extends Activity {
 			this.baseUrl = baseUrl;
 		}
 		
-		
-
 		public void handleOther(Uri uri) throws ClientProtocolException,
 				IOException {
-			getUrlAndDisplay(baseUrl + "uri=" + uri);
+			String u = (uri.getPath() == null) ? "" : uri.getPath();
+			String q = (uri.getQuery() == null) ? "" : uri.getQuery();
+			getUrlAndDisplay(baseUrl + "path=" + UrlEncode(u) + "&query=" + UrlEncode(q));
 		}
+		
 		public void handleChannel777() throws ClientProtocolException,
 				IOException {
 			getUrlAndDisplay(baseUrl + "f=chan&c=777");
@@ -310,16 +385,9 @@ public class Yak12Activity extends Activity {
 				} else if (label == "Channel0") {
 					startChannel0();
 				} else if (label == "Rendezvous") {
-					SecureRandom random = null;
-					try {
-						random = SecureRandom.getInstance("SHA1PRNG");
-					} catch (NoSuchAlgorithmException e) {
-						Log.i("antti", e.getMessage());
-					}
-					int mytempid = random.nextInt();
-					startRendezvous(String.valueOf(mytempid));
+					startRendezvous();
 				} else {
-					startMain("/" + label, "xyz=789");
+					startIntent("/" + label, "xyz=789");
 				}
 			}
 		}
@@ -349,6 +417,22 @@ public class Yak12Activity extends Activity {
 					return onClickLink(url);
 				}
 			});
+			
+			// https://code.google.com/p/android/issues/detail?id=7189
+			this.setOnTouchListener(new View.OnTouchListener() {
+		           @Override
+		           public boolean onTouch(View v, MotionEvent event) {
+		               switch (event.getAction()) {
+		                   case MotionEvent.ACTION_DOWN:
+		                   case MotionEvent.ACTION_UP:
+		                       if (!v.hasFocus()) {
+		                           v.requestFocus();
+		                       }
+		                       break;
+		               }
+		               return false;
+		           }
+		       });
 		}
 
 		protected boolean onClickLink(String url) {
@@ -356,7 +440,7 @@ public class Yak12Activity extends Activity {
 			String path = uri.getPath();
 			String query = uri.getQuery();
 
-			startMain(path, query);
+			startIntent(path, query);
 
 			return true;
 		}
@@ -371,6 +455,33 @@ public class Yak12Activity extends Activity {
 			this.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
 			this.setTextColor(Color.YELLOW);
 		}
+	}
+
+	public abstract class AnEditView extends LinearLayout {
+		public AnEditView(String text) {
+			super(yakContext);
+			Log.i("AnEditView", yakContext.toString() + "===  CTOR: " + Yak.CurlyEncode(text));
+			
+			final EditText editor = new EditText(yakContext);
+			editor.setText(text);
+			editor.setBackgroundColor(Color.BLACK);
+			editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+			editor.setTextColor(Color.GREEN);
+			
+			final Button btn = new Button(yakContext);
+			btn.setText("Save");
+			btn.setOnClickListener(new OnClickListener() {
+				public void onClick(View v) {
+					onSave(editor.getText().toString());
+				}
+			});
+
+			this.setOrientation(LinearLayout.VERTICAL);
+			this.addView(btn);
+			this.addView(editor);
+		}
+			
+		public abstract void onSave(String text);
 	}
 
 	public class AVerticalView extends LinearLayout {
@@ -394,30 +505,30 @@ public class Yak12Activity extends Activity {
 		for (String s : labels) {
 			z = z + labels + ";";
 		}
-		startMain("/list", null, "items", z);
+		startIntent("/list", null, "items", z);
 	}
 
 	void startChannel(String chanKey) {
-		startMain("/channel/" + chanKey, null);
+		startIntent("/channel/" + chanKey, null);
 	}
 
-	void startRendezvous(String myId) {
-		startMain("/rendez/" + myId, null);
+	void startRendezvous() {
+		startIntent("/Rendez", null);
 	}
 
 	void startDHDemo() {
-		startMain("/dhdemo", null);
+		startIntent("/dhdemo", null);
 	}
 
 	void startChannel777() {
-		startMain("/Channel777", null);
+		startIntent("/Channel777", null);
 	}
 
 	void startChannel0() {
-		startMain("/Channel0", null);
+		startIntent("/Channel0", null);
 	}
 
-	void startMain(String actPath, String actQuery, String... extrasKV) {
+	void startIntent(String actPath, String actQuery, String... extrasKV) {
 		Uri uri = new Uri.Builder().scheme("yak12").path(actPath)
 				.encodedQuery(actQuery).build();
 		Intent intent = new Intent("android.intent.action.MAIN", uri);

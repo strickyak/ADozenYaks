@@ -13,6 +13,7 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
@@ -78,6 +79,17 @@ public abstract class Yak {
 
 	public static String CharsToString(char[] chars) {
 		return String.valueOf(chars);
+	}
+	
+	public static String UrlEncode(String s) {
+		String z = "?";
+		try {
+			z = URLEncoder.encode(s, "utf-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+			Bad("UrlEncode(): " + e);
+		}
+		return z;
 	}
 
 	public static String UrlDecode(String s) {
@@ -370,8 +382,14 @@ public abstract class Yak {
 		}
 	}
 
-	public static boolean isAlphaNum(String s) {
+	public static boolean IsAlphaNum(String s) {
+		if (s == null) {
+			return false;
+		}
 		final int n = s.length();
+		if (n == 0) {
+			return false;  // Empty string NOT OK.
+		}
 		for (int i = 0; i < n; i++) {
 			char c = s.charAt(i);
 			if ('0' <= c && c <= '9')
@@ -385,6 +403,18 @@ public abstract class Yak {
 			return false;
 		}
 		return true;
+	}
+	
+	public String[] Tail(String[] a) {
+		final int n = a.length;
+		if (n < 1) {
+			Bad("Tail() on empty String[]");
+		}
+		String[] z = new String[n - 1];
+		for (int i = 0; i < n - 1; i++) {
+			z[i] = a[i + 1];
+		}
+		return z;
 	}
 
 	public static RuntimeException Bad(String msg, Object... args) {

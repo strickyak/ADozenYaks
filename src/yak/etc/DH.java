@@ -40,6 +40,10 @@ public class DH extends Yak {
 	public DH publicKey() {
 		return new DH(G.modPow(this.big, M));
 	}
+
+	public static int randomInt(int max) {
+		return Rand.nextInt(max);
+	}
 	
 	@Override
 	public String toString() {

@@ -26,7 +26,7 @@ public class StoreServer extends BaseServer {
 			throw Bad("StoreServer needs one arg, the magic word: ", Show(args));
 		}
 		String magicWord = args[0];
-		if (!(isAlphaNum(magicWord))) {
+		if (!(IsAlphaNum(magicWord))) {
 			throw Bad("magicWord must be alphaNum.");
 		}
 		new StoreServer(DEFAULT_PORT, magicWord).run();
@@ -49,7 +49,7 @@ public class StoreServer extends BaseServer {
 			throw Bad("Bad Magic Word: (%s) %s", magicWord, Show(req.path));
 		}
 
-		String verb = req.getAlphaNumQuery("f");
+		String verb = req.mustGetAlphaNumQuery("f");
 		String z = "MU";
 		
 		try {
@@ -59,9 +59,9 @@ public class StoreServer extends BaseServer {
 				z = doVerbList(req);
 			} else if (verb.equals("create")) {
 				z = doVerbCreate(req);
-			} else if (verb.equals("boot")) {
+			} else if (verb.equals("Boot")) {
 				z = doVerbBoot(req);
-			} else if (verb.equals("rendez")) {
+			} else if (verb.equals("Rendez")) {
 				z = doVerbRendez(req);
 			} else {
 				throw Bad("Bad verb: " + verb);
@@ -76,7 +76,7 @@ public class StoreServer extends BaseServer {
 	}
 
 	public String doVerbList(Request req) {
-		String channel = req.getAlphaNumQuery("c");
+		String channel = req.mustGetAlphaNumQuery("c");
 		// TODO: latest;
 		System.err.printf("LIST << channel: %s, latest: %s \n", channel, "TODO");
 		File chanDir = new File(String.format("data/%s/", channel));
@@ -91,8 +91,8 @@ public class StoreServer extends BaseServer {
 	}
 
 	public String doVerbFetch(Request req) throws IOException {
-		String channel = req.getAlphaNumQuery("c");
-		String tnode = req.getAlphaNumQuery("t");
+		String channel = req.mustGetAlphaNumQuery("c");
+		String tnode = req.mustGetAlphaNumQuery("t");
 		
 		File chanDir = new File(new File("data"), channel);
 		File tnodeFile = new File(chanDir, tnode);
@@ -100,9 +100,9 @@ public class StoreServer extends BaseServer {
 	}
 
 	public String doVerbCreate(Request req) throws IOException {
-		String channel = req.getAlphaNumQuery("c");
-		String tnode = req.getAlphaNumQuery("t");
-		String value = req.getAlphaNumQuery("value");
+		String channel = req.mustGetAlphaNumQuery("c");
+		String tnode = req.mustGetAlphaNumQuery("t");
+		String value = req.mustGetAlphaNumQuery("value");
 
 		File chanDir = new File(new File("data"), channel);
 		chanDir.mkdirs();
@@ -124,9 +124,9 @@ public class StoreServer extends BaseServer {
 	}
 	
 	public String doVerbRendez(Request req) throws IOException {
-		String me = req.getAlphaNumQuery("me");
-		String you = req.getAlphaNumQuery("you");
-		String value = req.getAlphaNumQuery("value");
+		String me = req.mustGetAlphaNumQuery("me");
+		String you = req.mustGetAlphaNumQuery("you");
+		String value = req.mustGetAlphaNumQuery("value");
 		Rendez.Card theirs = rendez.waitForPeer(me, you, value);
 		if (theirs == null) {
 			return "!";  // Indicate failure.
@@ -136,8 +136,8 @@ public class StoreServer extends BaseServer {
 	}
 	
 	public static class Rendez {
-		// Try: http://yak.net:30332/MagicYak?f=rendez&me=111&you=222&value=one
-		// And: http://yak.net:30332/MagicYak?f=rendez&me=222&you=111&value=two
+		// Try: http://yak.net:30332/MagicYak?f=Rendez&me=111&you=222&value=one
+		// And: http://yak.net:30332/MagicYak?f=Rendez&me=222&you=111&value=two
 		// $ cd ADozenYaks;  java  -classpath $PWD/bin/classes  yak.server.AppServer  MagicYak
 		public static class Card {
 			public String me;

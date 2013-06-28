@@ -8,8 +8,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Hash extends Yak {
 
-	public String str;
 	public byte[] bytes;
+	private String str;
 	SecretKeySpec key;
 
 	public Hash(String a) {

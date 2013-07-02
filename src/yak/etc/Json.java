@@ -199,7 +199,7 @@ public class Json extends Yak {
 		StringBuffer sb = new StringBuffer();
 		sb.append("{");
 		for (Object k : map.keySet()) {
-			sb.append(fmt(" %s: %s,\n", Quote(k.toString()), Quote(map.get(k).toString())));
+			sb.append(Fmt(" %s: %s,\n", Quote(k.toString()), Quote(map.get(k).toString())));
 		}
 		sb.append("}\n");
 		return sb.toString();
@@ -232,7 +232,7 @@ public class Json extends Yak {
 				if (' ' <= c && c <= '~') {
 					sb.append(c);
 				} else {
-					sb.append(fmt("\\u%04x", (int) c));
+					sb.append(Fmt("\\u%04x", (int) c));
 				}
 			}
 		}

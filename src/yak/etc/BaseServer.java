@@ -86,7 +86,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 		char[] content; // TODO: Should be byte[]
 		
 		public Request(String fakeRequest) {
-			parseQueryPieces(fakeRequest);
+			ParseQueryPiecesToMap(fakeRequest, this.query);
 		}
 
 		public Request(BufferedReader reader) throws IOException {
@@ -141,7 +141,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 			path = pathAndQuery[0].substring(1).split("/");
 
 			if (pathAndQuery.length == 2) {
-				parseQueryPieces(pathAndQuery[1]);
+				ParseQueryPiecesToMap(pathAndQuery[1], this.query);
 			}
 
 			if (contentLength > 0) {
@@ -152,20 +152,20 @@ public abstract class BaseServer extends Yak implements Runnable {
 					countToGO -= reader.read(content,
 							contentLength - countToGO, countToGO);
 				}				
-				parseQueryPieces(new String(content));
+				ParseQueryPiecesToMap(new String(content), this.query);
 			}
 			
-			System.err.println(fmt("PATH : %s", Show(path)));
+			System.err.println(Fmt("PATH : %s", Show(path)));
 			for (String q : this.query.keySet()) {
-				System.err.println(fmt("QUERY : %s -> %s", CurlyEncode(q), CurlyEncode(query.get(q))));
+				System.err.println(Fmt("QUERY : %s -> %s", CurlyEncode(q), CurlyEncode(query.get(q))));
 			}
 		}
 
-		public void parseQueryPieces(String queryString) {
+		public static void ParseQueryPiecesToMap(String queryString, HashMap<String, String> map) {
 			for (String queryPiece : queryString.split("\\&")) {
 				String[] kv = queryPiece.split("=", 2);
 				if (kv.length == 2) {
-					this.query.put(UrlDecode(kv[0]), UrlDecode(kv[1]));
+					map.put(UrlDecode(kv[0]), UrlDecode(kv[1]));
 				}
 			}
 		}

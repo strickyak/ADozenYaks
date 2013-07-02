@@ -196,9 +196,9 @@ public abstract class Yak {
 
 	public static String Show(byte[] bb) {
 		StringBuffer sb = new StringBuffer();
-		sb.append(fmt("{bytes*%d ", bb.length));
+		sb.append(Fmt("{bytes*%d ", bb.length));
 		for (int i = 0; i < bb.length; i++) {
-			sb.append(fmt("%d ", (int) bb[i]));
+			sb.append(Fmt("%d ", (int) bb[i]));
 		}
 		sb.append("}");
 		return sb.toString();
@@ -303,7 +303,7 @@ public abstract class Yak {
 		return sb.toString();
 	}
 
-	public static String fmt(String s, Object... objects) {
+	public static String Fmt(String s, Object... objects) {
 		return String.format(s, objects);
 	}
 
@@ -342,7 +342,7 @@ public abstract class Yak {
 
 		static public Ht entity(String name) {
 			Ht ht = new Ht();
-			ht.sb.append(fmt("&%s;", name));
+			ht.sb.append(Fmt("&%s;", name));
 			return ht;
 		}
 
@@ -354,26 +354,26 @@ public abstract class Yak {
 		static public Ht tag(Ht appendMe, String type, String[] args, Ht body) {
 			Ht z = appendMe == null ? new Ht() : appendMe;
 			assert htmlTagP.matcher(type).matches();
-			z.sb.append(fmt("<%s ", type));
+			z.sb.append(Fmt("<%s ", type));
 			if (args != null) {
 				for (int i = 0; i < args.length; i += 2) {
 					assert htmlTagP.matcher(args[i]).matches();
-					z.sb.append(fmt("%s=\"%s\" ", args[i],
+					z.sb.append(Fmt("%s=\"%s\" ", args[i],
 							htmlEscape(args[i + 1])));
 				}
 			}
-			z.sb.append(fmt(">%s</%s>", body, type));
+			z.sb.append(Fmt(">%s</%s>", body, type));
 			return z;
 		}
 
 		static public Ht tag(Ht appendMe, String type, String[] args) {
 			Ht z = appendMe == null ? new Ht() : appendMe;
 			assert htmlTagP.matcher(type).matches();
-			z.sb.append(fmt("<%s ", type));
+			z.sb.append(Fmt("<%s ", type));
 			if (args != null) {
 				for (int i = 0; i < args.length; i += 2) {
 					assert htmlTagP.matcher(args[i]).matches();
-					z.sb.append(fmt("%s=\"%s\" ", args[i],
+					z.sb.append(Fmt("%s=\"%s\" ", args[i],
 							htmlEscape(args[i + 1])));
 				}
 			}
@@ -418,11 +418,11 @@ public abstract class Yak {
 	}
 
 	public static RuntimeException Bad(String msg, Object... args) {
-		return new RuntimeException("BAD { " + fmt(msg, args) + " }");
+		return new RuntimeException("BAD { " + Fmt(msg, args) + " }");
 	}
 
 	public static void Say(String msg, Object... args) {
-		System.err.println(fmt("## " + msg, args));
+		System.err.println(Fmt("## " + msg, args));
 	}
 
 	public static void DontSay(String msg, Object... args) {

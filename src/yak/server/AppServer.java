@@ -20,6 +20,8 @@ public class AppServer extends BaseServer {
 	private String magicWord;
 	private String storagePath;
 	
+	private DH myDH = DH.RandomKey();
+	
 	public static void main(String[] args) {
 		try {
 			if (args.length != 1) {
@@ -33,7 +35,7 @@ public class AppServer extends BaseServer {
 			new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magicWord)).start();
 
 			Thread.sleep(1 * 1000); // Wait 1 sec, first.
-			ReadUrl(fmt("http://localhost:%d/%s?f=boot", StoreServer.DEFAULT_PORT, magicWord));
+			ReadUrl(Fmt("http://localhost:%d/%s?f=boot", StoreServer.DEFAULT_PORT, magicWord));
 			
 			new AppServer(DEFAULT_PORT, magicWord).run();
 		} catch (Exception e) {
@@ -45,7 +47,7 @@ public class AppServer extends BaseServer {
 	public AppServer(int port, String magicWord) {
 		super(port);
 		this.magicWord = magicWord;
-		System.err.println(fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, magicWord));
+		System.err.println(Fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, magicWord));
 	}
 
 	public Response handleRequest(Request req) {
@@ -59,7 +61,7 @@ public class AppServer extends BaseServer {
 			throw Bad("Bad Magic Word: (%s) %s", magicWord, Show(req.path));
 		}
 
-		String verb = req.query.get("f");
+		String verb = req.query.get("verb");
 		
 		String path = req.query.get("path");
 		if (path != null) {
@@ -71,7 +73,7 @@ public class AppServer extends BaseServer {
 		
 		String query = req.query.get("query");
 		if (query != null) {
-			req.parseQueryPieces(query);
+			req.ParseQueryPiecesToMap(query, req.query);
 		}
 		
 		String user = req.query.get("u");
@@ -87,8 +89,12 @@ public class AppServer extends BaseServer {
 				z = doVerbBoot();
 			} else if (verb.equals("Chan")) {
 				z = doVerbChan(channel);
+			} else if (verb.equals("Show")) {
+				z = doVerbShow(req.query);
 			} else if (verb.equals("Rendez")) {
-				z = doVerbRendez(req.query.get("mycode"), req.query.get("peercode"));
+				z = doVerbRendez(req.query);
+			} else if (verb.equals("Rendez2")) {
+				z = doVerbRendez2(req.query);
 			} else {
 				throw new Exception("bad Verb: " + verb);
 			}
@@ -118,7 +124,7 @@ public class AppServer extends BaseServer {
 
 	private String doVerbChan(String channel) throws IOException {
 		String[] tnodes = UseStore("list", "c=" + channel).split("\n");
-		String z = fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
+		String z = Fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
 		z += "<br><dl>\n";
 		for (String t : tnodes) {
 			if (!(IsAlphaNum(t))) {
@@ -126,25 +132,35 @@ public class AppServer extends BaseServer {
 			}
 			
 			z += "<dt><b>" + t + "</b><br>\n";
-			z += "<dd><pre>\n" + UseStore("fetch", fmt("c=%s&t=%s", channel, t)) + "\n</pre>\n";
+			z += "<dd><pre>\n" + UseStore("fetch", Fmt("c=%s&t=%s", channel, t)) + "\n</pre>\n";
 		}
 		z += "</dl><p> OK.";
 		return z;
 	}
 	
 
-	private String doVerbRendez(String mycode, String peercode) throws IOException {
-		if (mycode == null) {
-			int myCode = DH.randomInt(89999) + 10000;
-			return "Your code is " + myCode + "<P> Enter friend's code: <BR>"
-					+ "<form method=GET action=/Rendez?mycode=" + myCode + ">"
-							+ "<input type=text name=peercode><br>"
-							+ "<input hidden name=mycode value=\"" + mycode + "\">"
+	private String doVerbRendez(HashMap<String,String> q) throws IOException {
+			int myNewCode = DH.randomInt(89999) + 10000;
+			return "Your code is " + myNewCode + "<P> Enter friend's code: <BR>"
+					+ "<form method=GET action=/>"
+							+ "<input type=text name=you><br>"
+							+ "<input type=hidden name=me value=" + myNewCode + ">"
+							+ "<input type=hidden name=verb value=Rendez2>"
 					+ "<input type=submit>"
 					+ "</form>";
-		}
+	}
+	
+	private String doVerbRendez2(HashMap<String,String> q) throws IOException {
+		String x = ReadUrl(Fmt("http://%s:%s/%s?f=Rendez&me=%s&you=%s&value=%s",
+				StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT,
+				magicWord, q.get("me"), q.get("you"), myDH.publicKey()));
 
-		return "TODO--doVerbRendez() my=" +mycode + " peer=" + peercode;
+		return new Ht("StoreServer/Rendez returns: " + x).toString();
+	}
+	
+
+	private String doVerbShow(HashMap<String,String> q) throws IOException {
+		return new Ht(q.toString()).toString();
 	}
 	
 	public void setStoragePath(String storagePath) {
@@ -153,11 +169,11 @@ public class AppServer extends BaseServer {
 	
 	public String UseStore(String verb, String args) throws IOException {
 		if (storagePath.equals("")) {
-			return ReadUrl(fmt("http://%s:%s/%s?f=%s&%s",
+			return ReadUrl(Fmt("http://%s:%s/%s?f=%s&%s",
 					StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT,
 					magicWord, verb, args));
 		} else {
-			return ReadUrl(fmt("%s?f=%s&%s", storagePath, verb, args));
+			return ReadUrl(Fmt("%s?f=%s&%s", storagePath, verb, args));
 		}
 	}
 	

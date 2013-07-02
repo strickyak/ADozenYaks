@@ -35,7 +35,7 @@ public class StoreServer extends BaseServer {
 	public StoreServer(int port, String magicWord) {
 		super(port);
 		this.magicWord = magicWord;
-		System.err.println(fmt("Hello, this is StoreServer on %d with %s", DEFAULT_PORT, magicWord));
+		System.err.println(Fmt("Hello, this is StoreServer on %d with %s", DEFAULT_PORT, magicWord));
 	}
 
 	public Response handleRequest(Request req) {

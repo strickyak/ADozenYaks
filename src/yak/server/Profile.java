@@ -44,11 +44,11 @@ public class Profile extends Yak {
 		}
 		
 		String innerJson() {
-			return fmt(" \"_\": %s,  \"name\": %s, ", Json.Quote(this.getClass().getName()), Json.Quote(name));
+			return Fmt(" \"_\": %s,  \"name\": %s, ", Json.Quote(this.getClass().getName()), Json.Quote(name));
 		}
 		@Override
 		public String toString() {
-			return fmt("{ %s }\n", innerJson());
+			return Fmt("{ %s }\n", innerJson());
 		}
 	}
 
@@ -72,7 +72,7 @@ public class Profile extends Yak {
 		}
 		@Override
 		String innerJson() {
-			return super.innerJson() + fmt(
+			return super.innerJson() + Fmt(
 					" \"dhpub\": %s, \"hub\": %s, ",
 					Json.Quote(dhpub),
 					Json.Quote(hub));
@@ -109,7 +109,7 @@ public class Profile extends Yak {
 		}
 		@Override
 		String innerJson() {
-			return super.innerJson() + fmt(
+			return super.innerJson() + Fmt(
 					" \"dhmut\": %s, \"rooms\": %s, ",
 					Json.Quote(dhmut),
 					Json.Show(rooms));
@@ -146,7 +146,7 @@ public class Profile extends Yak {
 		}
 		@Override
 		String innerJson() {
-			return super.innerJson() + fmt(
+			return super.innerJson() + Fmt(
 					" \"dhsec\": %s, \"friends\": %s, ",
 					Json.Quote(dhsec),
 					Json.Show(friends));
@@ -178,7 +178,7 @@ public class Profile extends Yak {
 		}
 		@Override
 		String innerJson() {
-			return super.innerJson() + fmt(
+			return super.innerJson() + Fmt(
 					" \"members\": %s, ",
 					Json.Show(members));
 		}

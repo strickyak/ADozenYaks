@@ -11,6 +11,7 @@ import java.math.BigInteger;
 import java.net.URI;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.HashMap;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
@@ -62,7 +63,7 @@ public class Yak12Activity extends Activity {
 	static Thread serverThread;
 	static String appMagic = new Hash(DH.RandomKey().toString()).toString();
 
-	AppCaller appCaller = new AppCaller(Yak.fmt("http://localhost:%d/%s?",
+	AppCaller appCaller = new AppCaller(Yak.Fmt("http://localhost:%d/%s?",
 			AppServer.DEFAULT_PORT, appMagic));;
 	Context yakContext = this;
 	Handler yakHandler = new Handler();
@@ -93,21 +94,23 @@ public class Yak12Activity extends Activity {
 		String query = uri == null ? "" : uri.getQuery();
 
 		try {
-			Log.i("antti", "PATH=" + path);
+			Log.i("antti", "..PATH=" + path);
+			Log.i("antti", "...QUERY=" + query);
 			String[] words = path.split("/");
-			String verb = "";
+			String command = "";
 			if (words.length > 1) {
-				verb = words[1];
+				command = words[1];
 			}
-
-			Log.i("antti", "=============== VERB =" + verb);
-			if (verb.equals("dhdemo")) {
+			HashMap<String, String> queryMap = new HashMap<String, String>();
+			if (query.contains("verb=")) {
+				handleNewVerb(query);
+			} else if (command.equals("dhdemo")) {
 				handleDHDemo();
-			} else if (verb.equals("Channel777")) {
+			} else if (command.equals("Channel777")) {
 				handleChannel777();
-			} else if (verb.equals("Config")) {
+			} else if (command.equals("Config")) {
 				handleConfig();
-			} else if (verb.equals("")) {
+			} else if (command.equals("")) {
 				handleDefault();
 			} else {
 				handleOther(uri);
@@ -151,8 +154,12 @@ public class Yak12Activity extends Activity {
 		appCaller.handleOther(uri);
 	}
 
+	private void handleNewVerb(String query) throws ClientProtocolException, IOException {
+		appCaller.handleNewVerb(query);
+	}
+
 	private void handleDefault() {
-		displayList(new String[] { "Config", "One", "Two", "Three", "Channel",
+		displayList(new String[] { "Config", "*Rendez", "One", "Two", "Three", "Channel",
 				"Rendezvous", "dhdemo", "Channel777", "Channel0", });
 	}
 
@@ -278,16 +285,20 @@ public class Yak12Activity extends Activity {
 			this.baseUrl = baseUrl;
 		}
 		
+		public void handleNewVerb(String query) throws ClientProtocolException,
+				IOException {
+			getUrlAndDisplay(baseUrl + "&" + query);
+		}
+		
 		public void handleOther(Uri uri) throws ClientProtocolException,
 				IOException {
-			String u = (uri.getPath() == null) ? "" : uri.getPath();
 			String q = (uri.getQuery() == null) ? "" : uri.getQuery();
-			getUrlAndDisplay(baseUrl + "path=" + UrlEncode(u) + "&query=" + UrlEncode(q));
+			getUrlAndDisplay(baseUrl + "&" + UrlEncode(q));
 		}
 		
 		public void handleChannel777() throws ClientProtocolException,
 				IOException {
-			getUrlAndDisplay(baseUrl + "f=chan&c=777");
+			getUrlAndDisplay(baseUrl + "verb=chan&c=777");
 		}
 
 		/** Details of getUrl in bg, and fill in view in UI Thread. */
@@ -376,7 +387,10 @@ public class Yak12Activity extends Activity {
 			public void onItemClick(AdapterView<?> arg0, View arg1, int index,
 					long arg3) {
 				final String label = labels[index];
-				if (label == "Channel") {
+				
+				if (label.length() > 0 && label.charAt(0) == '*') {
+					startStarVerb(label.substring(1));
+				} else if (label == "Channel") {
 					startChannel("555");
 				} else if (label == "dhdemo") {
 					startDHDemo();
@@ -506,6 +520,10 @@ public class Yak12Activity extends Activity {
 			z = z + labels + ";";
 		}
 		startIntent("/list", null, "items", z);
+	}
+
+	void startStarVerb(String verb) {
+		startIntent("/", "verb=" + verb);
 	}
 
 	void startChannel(String chanKey) {

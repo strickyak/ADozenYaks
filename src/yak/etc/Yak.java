@@ -6,16 +6,22 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.regex.Pattern;
+
+import android.content.Context;
 
 public abstract class Yak {
 
@@ -441,6 +447,63 @@ public abstract class Yak {
 	public static void Must(boolean cond, Object x) {
 		if (!(cond)) {
 			throw Bad("Must Failed: (%s)", x);
+		}
+	}
+ 
+	public static abstract class FileIO {
+		protected abstract BufferedReader openFileInput(String filename) throws FileNotFoundException;
+		protected abstract PrintWriter openFileOutput(String filename, boolean worldly) throws IOException;
+
+		public String readFile(String filename) {
+			try {
+//				FileInputStream fis = openFileInput(filename);
+//				InputStreamReader isr = new InputStreamReader(fis);
+//				BufferedReader br = new BufferedReader(isr);
+				BufferedReader br = openFileInput(filename);
+				StringBuilder sb = new StringBuilder();
+				while (true) {
+					String line = br.readLine();
+					if (line == null)
+						break;
+					sb.append(line);
+				}
+				br.close();
+				return sb.toString();
+			} catch (IOException e) {
+				throw new RuntimeException("Cannot readFile: " + filename, e);
+			}
+		}
+
+		public void writeFile(String filename, String content, boolean worldly) {
+			try {
+//				FileOutputStream fos = openFileOutput(filename,
+//						Context.MODE_WORLD_READABLE
+//								| Context.MODE_WORLD_WRITEABLE);
+//				PrintStream ps = new PrintStream(fos);
+//				PrintWriter pw = new PrintWriter(ps);
+				PrintWriter pw = openFileOutput(filename, worldly);
+				pw.print(content);
+				pw.flush();
+				pw.close();
+				if (pw.checkError()) {
+					throw new IOException("checkError is true");
+				}
+			} catch (IOException e) {
+				throw new RuntimeException("Cannot writeFile: " + filename, e);
+			}
+		}
+	}
+	
+	public static class JavaFileIO extends FileIO {
+
+		@Override
+		protected BufferedReader openFileInput(String filename) throws FileNotFoundException {
+			return new BufferedReader(new FileReader(new File(filename)));
+		}
+
+		@Override
+		protected PrintWriter openFileOutput(String filename, boolean worldly) throws IOException {
+			return new PrintWriter(new BufferedWriter(new FileWriter(filename)));
 		}
 	}
 }

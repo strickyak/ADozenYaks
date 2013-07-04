@@ -17,8 +17,9 @@ import yak.etc.Yak;
 public class AppServer extends BaseServer {
 	
 	public static final int DEFAULT_PORT = 4004;
-	private String magicWord;
+	private String appMagicWord;
 	private String storagePath;
+	private FileIO fileIO;
 	
 	private DH myDH = DH.RandomKey();
 	
@@ -27,27 +28,29 @@ public class AppServer extends BaseServer {
 			if (args.length != 1) {
 				throw Bad("AppServer needs one arg, the magic word: ", Show(args));
 			}
-			String magicWord = args[0];
-			if (!(IsAlphaNum(magicWord))) {
+			String magic = args[0];
+			if (!(IsAlphaNum(magic))) {
 				throw Bad("magicWord must be alphaNum.");
 			}
 
-			new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magicWord)).start();
-
-			Thread.sleep(1 * 1000); // Wait 1 sec, first.
-			ReadUrl(Fmt("http://localhost:%d/%s?f=boot", StoreServer.DEFAULT_PORT, magicWord));
+			new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magic)).start();
 			
-			new AppServer(DEFAULT_PORT, magicWord).run();
+			new AppServer(DEFAULT_PORT, magic,
+					Fmt("http://localhost:%d/%s", StoreServer.DEFAULT_PORT, magic),
+					null).run();
 		} catch (Exception e) {
 			System.err.println("CAUGHT: " + e);
 			e.printStackTrace();
 		}
 	}
 
-	public AppServer(int port, String magicWord) {
+	public AppServer(int port, String appMagicWord, String storagePath, FileIO fileIO) {
 		super(port);
-		this.magicWord = magicWord;
-		System.err.println(Fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, magicWord));
+		this.appMagicWord = appMagicWord;
+		this.storagePath = storagePath;
+		this.fileIO = (fileIO == null) ? new JavaFileIO() : fileIO;
+		System.err.println(Fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, appMagicWord));
+		System.err.println(Fmt("Constructed storagePath=%s", DEFAULT_PORT, storagePath));
 	}
 
 	public Response handleRequest(Request req) {
@@ -57,8 +60,8 @@ public class AppServer extends BaseServer {
 		if (req.path[0].equals("favicon.ico")) {
 			return new Response("No favicon.ico here.", 404, "text/plain");
 		}
-		if (!(req.path[0].equals(magicWord))) {
-			throw Bad("Bad Magic Word: (%s) %s", magicWord, Show(req.path));
+		if (!(req.path[0].equals(appMagicWord))) {
+			throw Bad("Bad Magic Word: %s", Show(req.path));
 		}
 
 		String verb = req.query.get("verb");
@@ -80,7 +83,7 @@ public class AppServer extends BaseServer {
 		String channel = req.query.get("c");
 		String tnode = req.query.get("t");
 		String latest = req.query.get("latest");
-		String value = req.query.get("value");
+		String value = req.query.get("v");
 		verb = (verb == null) ? "null" : verb;
 		String z = "!";
 
@@ -151,11 +154,9 @@ public class AppServer extends BaseServer {
 	}
 	
 	private String doVerbRendez2(HashMap<String,String> q) throws IOException {
-		String x = ReadUrl(Fmt("http://%s:%s/%s?f=Rendez&me=%s&you=%s&value=%s",
-				StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT,
-				magicWord, q.get("me"), q.get("you"), myDH.publicKey()));
-
-		return new Ht("StoreServer/Rendez returns: " + x).toString();
+		String x = ReadUrl(Fmt("%s?f=Rendez&me=%s&you=%s&v=%s",
+				storagePath, q.get("me"), q.get("you"), myDH.publicKey()));
+		return new Ht("RENDEZ RESULT " + x).toString();
 	}
 	
 
@@ -169,12 +170,9 @@ public class AppServer extends BaseServer {
 	
 	public String UseStore(String verb, String args) throws IOException {
 		if (storagePath.equals("")) {
-			return ReadUrl(Fmt("http://%s:%s/%s?f=%s&%s",
-					StoreServer.DEFAULT_HOST, StoreServer.DEFAULT_PORT,
-					magicWord, verb, args));
-		} else {
-			return ReadUrl(Fmt("%s?f=%s&%s", storagePath, verb, args));
+			Bad("No storage Path in AppServer");
 		}
+		return ReadUrl(Fmt("%s?f=%s&%s", storagePath, verb, args));
 	}
 	
 	public static class Sessions {

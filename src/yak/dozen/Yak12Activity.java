@@ -1,12 +1,18 @@
 package yak.dozen;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.net.URI;
 import java.security.NoSuchAlgorithmException;
@@ -23,6 +29,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import yak.etc.DH;
 import yak.etc.Hash;
 import yak.etc.Yak;
+import yak.etc.Yak.FileIO;
 import yak.server.AppServer;
 
 import android.net.Uri;
@@ -67,6 +74,7 @@ public class Yak12Activity extends Activity {
 			AppServer.DEFAULT_PORT, appMagic));;
 	Context yakContext = this;
 	Handler yakHandler = new Handler();
+	FileIO fileIO;
 	
 	public Yak12Activity() {
 		Log.i("yak12", "###### CTOR: " + this);
@@ -76,13 +84,14 @@ public class Yak12Activity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		Log.i("yak12", "###### onCreate: " + this);
 		super.onCreate(savedInstanceState);
+		fileIO = new AndroidFileIO();
 
 		// Start embedded App Server, if it is not yet started.
 		if (serverThread == null) {
-			server = new AppServer(AppServer.DEFAULT_PORT, appMagic);
+			server = new AppServer(AppServer.DEFAULT_PORT, appMagic, "TEMPORARY", fileIO);
 			serverThread = new Thread(server);
 			serverThread.start();
-			// ??// Yak.sleepSecs(0.333);
+			Yak.sleepSecs(0.1);
 			
 			initializeStoragePath();
 		}
@@ -92,6 +101,7 @@ public class Yak12Activity extends Activity {
 		Bundle extras = intent.getExtras();
 		String path = uri == null ? "/" : uri.getPath();
 		String query = uri == null ? "" : uri.getQuery();
+		query = (query == null) ? "" : query;
 
 		try {
 			Log.i("antti", "..PATH=" + path);
@@ -113,7 +123,7 @@ public class Yak12Activity extends Activity {
 			} else if (command.equals("")) {
 				handleDefault();
 			} else {
-				handleOther(uri);
+				Yak.Bad("BAD LAUNCH URI: " + uri);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -126,10 +136,12 @@ public class Yak12Activity extends Activity {
 	public void initializeStoragePath() {
 		String storagePath = "";
 		try {
-			storagePath = readFile("config.txt");
-		} finally {
-			server.setStoragePath(storagePath);
+			storagePath = fileIO.readFile("config.txt");
+		} catch (RuntimeException e) {
+			e.printStackTrace();
 		}
+		server.setStoragePath(storagePath);
+		
 	}
 
 	public void toast(String message) {
@@ -166,7 +178,7 @@ public class Yak12Activity extends Activity {
 	private void handleConfig() {
 		String text = "";
 		try {
-			text = readFile("config.txt");
+			text = fileIO.readFile("config.txt");
 		} catch (Exception e) {
 			toast(e.toString());
 		}
@@ -176,7 +188,7 @@ public class Yak12Activity extends Activity {
 		AnEditView editor = new AnEditView(text) {
 			@Override
 			public void onSave(String newText) {
-				writeFile("config.txt", newText);
+				fileIO.writeFile("config.txt", newText, false);
 				server.setStoragePath(newText);
 				toast("Saved Config");
 				startIntent("/", null);
@@ -185,38 +197,22 @@ public class Yak12Activity extends Activity {
 		setContentView(editor);
 	}
 	
-	private String readFile(String filename) {
-		try {
-			FileInputStream fis = openFileInput(filename);
-			InputStreamReader isr = new InputStreamReader(fis);
-			BufferedReader br = new BufferedReader(isr);
-			StringBuilder sb = new StringBuilder();
-			while (true) {
-				String line = br.readLine();
-				if (line == null)
-					break;
-				sb.append(line);
-			}
-			fis.close();
-			return sb.toString();
-		} catch (IOException e) {
-			throw new RuntimeException("Cannot readFile: " + filename, e);
-		}
-	}
+	class AndroidFileIO extends Yak.FileIO {
 
-	private void writeFile(String filename, String content) {
-		try {
-			FileOutputStream fos = openFileOutput(filename,
-					Context.MODE_WORLD_READABLE | Context.MODE_WORLD_WRITEABLE);
-			PrintStream ps = new PrintStream(fos);
-			ps.print(content);
-			ps.flush();
-			ps.close();
-			if (ps.checkError()) {
-				throw new IOException("checkError is true");
-			}
-		} catch (IOException e) {
-			throw new RuntimeException("Cannot writeFile: " + filename, e);
+		@Override
+		protected BufferedReader openFileInput(String filename) throws FileNotFoundException {
+
+			FileInputStream fis = Yak12Activity.this.openFileInput(filename);
+			InputStreamReader isr = new InputStreamReader(fis);
+			return new BufferedReader(isr);
+		}
+
+		@Override
+		protected PrintWriter openFileOutput(String filename, boolean worldly) throws IOException {
+
+			FileOutputStream fos = Yak12Activity.this.openFileOutput(filename,
+					worldly ? (Context.MODE_WORLD_READABLE | Context.MODE_WORLD_WRITEABLE) : Context.MODE_PRIVATE);
+			return new PrintWriter(new PrintStream(fos));
 		}
 	}
 
@@ -394,12 +390,12 @@ public class Yak12Activity extends Activity {
 					startChannel("555");
 				} else if (label == "dhdemo") {
 					startDHDemo();
-				} else if (label == "Channel777") {
-					startChannel777();
-				} else if (label == "Channel0") {
-					startChannel0();
-				} else if (label == "Rendezvous") {
-					startRendezvous();
+//				} else if (label == "Channel777") {
+//					startChannel777();
+//				} else if (label == "Channel0") {
+//					startChannel0();
+//				} else if (label == "Rendezvous") {
+//					startRendezvous();
 				} else {
 					startIntent("/" + label, "xyz=789");
 				}
@@ -530,21 +526,21 @@ public class Yak12Activity extends Activity {
 		startIntent("/channel/" + chanKey, null);
 	}
 
-	void startRendezvous() {
-		startIntent("/Rendez", null);
-	}
+//	void startRendezvous() {
+//		startIntent("/Rendez", null);
+//	}
 
 	void startDHDemo() {
 		startIntent("/dhdemo", null);
 	}
 
-	void startChannel777() {
-		startIntent("/Channel777", null);
-	}
-
-	void startChannel0() {
-		startIntent("/Channel0", null);
-	}
+//	void startChannel777() {
+//		startIntent("/Channel777", null);
+//	}
+//
+//	void startChannel0() {
+//		startIntent("/Channel0", null);
+//	}
 
 	void startIntent(String actPath, String actQuery, String... extrasKV) {
 		Uri uri = new Uri.Builder().scheme("yak12").path(actPath)

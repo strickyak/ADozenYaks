@@ -53,11 +53,11 @@ public class StoreServer extends BaseServer {
 		String z = "MU";
 		
 		try {
-			if (verb.equals("fetch")) {
+			if (verb.equals("Fetch")) {
 				z = doVerbFetch(req);
-			} else if (verb.equals("list")) {
+			} else if (verb.equals("List")) {
 				z = doVerbList(req);
-			} else if (verb.equals("create")) {
+			} else if (verb.equals("Create")) {
 				z = doVerbCreate(req);
 			} else if (verb.equals("Boot")) {
 				z = doVerbBoot(req);
@@ -68,7 +68,7 @@ public class StoreServer extends BaseServer {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			return new Response("ERROR:\r\n" + e.getMessage(), 200,
+			return new Response("ERROR in StoreServer.handleRequest:\r\n" + e.getMessage(), 200,
 					"text/plain");
 		}
 
@@ -102,7 +102,7 @@ public class StoreServer extends BaseServer {
 	public String doVerbCreate(Request req) throws IOException {
 		String channel = req.mustGetAlphaNumQuery("c");
 		String tnode = req.mustGetAlphaNumQuery("t");
-		String value = req.mustGetAlphaNumQuery("value");
+		String value = req.mustGetAlphaNumQuery("v");
 
 		File chanDir = new File(new File("data"), channel);
 		chanDir.mkdirs();
@@ -114,11 +114,11 @@ public class StoreServer extends BaseServer {
 	public String doVerbBoot(Request req) throws IOException {
 		String z = "BOOTING: ";
 		
-		z += " # " + doVerbCreate(new Request("c=777&t=101&value=first"));
-		z += " # " + doVerbCreate(new Request("c=777&t=102&value=second"));
-		z += " # " + doVerbCreate(new Request("c=777&t=103&value=third"));
-		z += " # " + doVerbCreate(new Request("c=888&t=104&value=fourth"));
-		z += " # " + doVerbCreate(new Request("c=888&t=105&value=fifth"));
+		z += " # " + doVerbCreate(new Request("c=777&t=101&v=first"));
+		z += " # " + doVerbCreate(new Request("c=777&t=102&v=second"));
+		z += " # " + doVerbCreate(new Request("c=777&t=103&v=third"));
+		z += " # " + doVerbCreate(new Request("c=888&t=104&v=fourth"));
+		z += " # " + doVerbCreate(new Request("c=888&t=105&v=fifth"));
 		
 		return z + "\n\n... BOOTED.";
 	}
@@ -126,7 +126,7 @@ public class StoreServer extends BaseServer {
 	public String doVerbRendez(Request req) throws IOException {
 		String me = req.mustGetAlphaNumQuery("me");
 		String you = req.mustGetAlphaNumQuery("you");
-		String value = req.mustGetAlphaNumQuery("value");
+		String value = req.mustGetAlphaNumQuery("v");
 		Rendez.Card theirs = rendez.waitForPeer(me, you, value);
 		if (theirs == null) {
 			return "!";  // Indicate failure.
@@ -136,8 +136,8 @@ public class StoreServer extends BaseServer {
 	}
 	
 	public static class Rendez {
-		// Try: http://yak.net:30332/MagicYak?f=Rendez&me=111&you=222&value=one
-		// And: http://yak.net:30332/MagicYak?f=Rendez&me=222&you=111&value=two
+		// Try: http://yak.net:30332/MagicYak?f=Rendez&me=111&you=222&v=one
+		// And: http://yak.net:30332/MagicYak?f=Rendez&me=222&you=111&v=two
 		// $ cd ADozenYaks;  java  -classpath $PWD/bin/classes  yak.server.AppServer  MagicYak
 		public static class Card {
 			public String me;
@@ -171,7 +171,7 @@ public class StoreServer extends BaseServer {
 		private HashMap<String, Card> peers = new HashMap<String, Card>();
 		
 		private synchronized void put(Card card) {
-			Say("PUT CARD timeout=%d me=%s you=%s value=%s", card.timeout, card.me, card.you, card.value);
+			Say("PUT CARD timeout=%d me=%s you=%s v=%s", card.timeout, card.me, card.you, card.value);
 			peers.put(card.me + " " + card.you, card);
 		}
 		
@@ -180,7 +180,7 @@ public class StoreServer extends BaseServer {
 			if (z == null) {
 				Say("GET CARD (%s %s) -> NULL", me, you);
 			} else {
-				Say("GET CARD timeout=%d me=%s you=%s value=%s", z.timeout, z.me, z.you, z.value);
+				Say("GET CARD timeout=%d me=%s you=%s v=%s", z.timeout, z.me, z.you, z.value);
 			}
 			return z;
 		}
@@ -190,7 +190,7 @@ public class StoreServer extends BaseServer {
 			Say("GC at %d", now);
 			for (String key : peers.keySet()) {
 				Card card = peers.get(key);
-				Say("... CARD timeout=%d me=%s you=%s value=%s", card.timeout - now, card.me, card.you, card.value);
+				Say("... CARD timeout=%d me=%s you=%s v=%s", card.timeout - now, card.me, card.you, card.value);
 				if (card.timeout < now) {
 					peers.remove(key);
 				}

@@ -60,6 +60,10 @@ public class Profile extends Yak {
 			super(j);
 		}
 
+		public Member(String name) {
+			super(name);
+		}
+
 		@Override
 		void unmarshalField(Json.Parser j, String key) {
 			if (key.equals("dhpub")) {
@@ -88,25 +92,21 @@ public class Profile extends Yak {
 			super(j);
 		}
 
+		public Friend(String name) {
+			super(name);
+		}
+
 		@Override
 		void unmarshalField(Json.Parser j, String key) {
 			if (j.str.equals("dhmut")) {
 				this.dhmut = j.takeStringValue();
 			} else if (key.equals("rooms")) {
-				Must(j.token == '[', j.token);
-				j.advance();
-				while (j.token != ']') {
-					Room room = new Room(j);
-					if (rooms.containsKey(room.name)) {
-						throw Bad("Friend <%s> already contains room <%s>",
-								name, room.name);
-					}
-					rooms.put(room.name, room);
-				}
+				unmarshalRoomList(j, rooms);
 			} else {
 				super.unmarshalField(j, key);
 			}
 		}
+
 		@Override
 		String innerJson() {
 			return super.innerJson() + Fmt(
@@ -120,6 +120,9 @@ public class Profile extends Yak {
 		String dhsec;
 		public HashMap<String, Friend> friends = new HashMap<String, Friend>();
 
+		public Self(String name) {
+			super(name);
+		}
 		public Self(Json.Parser js) {
 			super(js);
 		}
@@ -129,17 +132,7 @@ public class Profile extends Yak {
 			if (key.equals("dhsec")) {
 				this.dhsec = j.takeStringValue();
 			} else if (key.equals("friends")) {
-				Must(j.token == '[', j.token);
-				j.advance();
-				while (j.token != ']') {
-					Friend friend = new Friend(j);
-					Say("friend = %s", friend);
-					Say("friends = %s", Json.Show(friends));
-					if (friends.containsKey(friend.name)) {
-						throw Bad("Already contains friend <%s>", friend.name);
-					}
-					friends.put(friend.name, friend);
-				}
+				unmarshalFriendsList(j, friends);
 			} else {
 				super.unmarshalField(j, key);
 			}
@@ -163,15 +156,7 @@ public class Profile extends Yak {
 		@Override
 		void unmarshalField(Json.Parser j, String key) {
 			if (key.equals("members")) {
-				Must(j.token == '[', j.token);
-				j.advance();
-				while (j.token != ']') {
-					Member member = new Member(j);
-					if (members.containsKey(member.name)) {
-						throw Bad("Room (%s) already contains member (%s)", name, member.name);
-					}
-					members.put(member.name, member);
-				}
+				unmarshalMembersList(j, members);
 			} else {
 				super.unmarshalField(j, key);
 			}
@@ -181,6 +166,45 @@ public class Profile extends Yak {
 			return super.innerJson() + Fmt(
 					" \"members\": %s, ",
 					Json.Show(members));
+		}
+	}
+	
+	protected static void unmarshalRoomList(Json.Parser j, HashMap<String, Room> map) {
+		Must(j.token == '[', j.token);
+		j.advance();
+		while (j.token != ']') {
+			Room room = new Room(j);
+			if (map.containsKey(room.name)) {
+				throw Bad("Friend already contains room <%s>",
+						room.name);
+			}
+			map.put(room.name, room);
+		}
+	}
+
+	protected static void unmarshalFriendsList(Json.Parser j, HashMap<String, Friend> map) {
+		Must(j.token == '[', j.token);
+		j.advance();
+		while (j.token != ']') {
+			Friend friend = new Friend(j);
+			Say("friend = %s", friend);
+			Say("friends = %s", Json.Show(map));
+			if (map.containsKey(friend.name)) {
+				throw Bad("Already contains friend <%s>", friend.name);
+			}
+			map.put(friend.name, friend);
+		}
+	}
+
+	protected static void unmarshalMembersList(Json.Parser j, HashMap<String, Member> map) {
+		Must(j.token == '[', j.token);
+		j.advance();
+		while (j.token != ']') {
+			Member member = new Member(j);
+			if (map.containsKey(member.name)) {
+				throw Bad("Room already contains member (%s)", member.name);
+			}
+			map.put(member.name, member);
 		}
 	}
 

@@ -179,17 +179,6 @@ public abstract class Yak {
 		return sb.toString();
 	}
 
-	public static String XXXXXXXXXXXXXXXXShow(HashMap<String, String> map) {
-		StringBuffer sb = new StringBuffer();
-		sb.append("{map ");
-		for (String k : map.keySet()) {
-			sb.append("[ " + CurlyEncode(k) + " ]= " + CurlyEncode(map.get(k))
-					+ " ");
-		}
-		sb.append("}");
-		return sb.toString();
-	}
-
 	public static String Show(String[] ss) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("{arr ");
@@ -456,9 +445,6 @@ public abstract class Yak {
 
 		public String readFile(String filename) {
 			try {
-//				FileInputStream fis = openFileInput(filename);
-//				InputStreamReader isr = new InputStreamReader(fis);
-//				BufferedReader br = new BufferedReader(isr);
 				BufferedReader br = openFileInput(filename);
 				StringBuilder sb = new StringBuilder();
 				while (true) {
@@ -476,11 +462,6 @@ public abstract class Yak {
 
 		public void writeFile(String filename, String content, boolean worldly) {
 			try {
-//				FileOutputStream fos = openFileOutput(filename,
-//						Context.MODE_WORLD_READABLE
-//								| Context.MODE_WORLD_WRITEABLE);
-//				PrintStream ps = new PrintStream(fos);
-//				PrintWriter pw = new PrintWriter(ps);
 				PrintWriter pw = openFileOutput(filename, worldly);
 				pw.print(content);
 				pw.flush();

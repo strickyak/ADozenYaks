@@ -136,6 +136,9 @@ public class StoreServer extends BaseServer {
 	}
 	
 	public static class Rendez {
+		private static final int NUM_SECS_TO_WAIT = 10;
+		private static final int NUM_SECS_TILL_GC = 60;
+		
 		// Try: http://yak.net:30332/MagicYak?f=Rendez&me=111&you=222&v=one
 		// And: http://yak.net:30332/MagicYak?f=Rendez&me=222&you=111&v=two
 		// $ cd ADozenYaks;  java  -classpath $PWD/bin/classes  yak.server.AppServer  MagicYak
@@ -152,11 +155,11 @@ public class StoreServer extends BaseServer {
 			mine.me = me;
 			mine.you = you;
 			mine.value = value;
-			mine.timeout = new Date().getTime() + 60*1000;
+			mine.timeout = new Date().getTime() + NUM_SECS_TILL_GC*1000;
 			put(mine);
-			for (int i = 0; i < 15; i++) {
+			for (int i = 0; i < NUM_SECS_TO_WAIT; i++) {
 				try {
-					Thread.sleep(1*1000);
+					Thread.sleep(1*1000);  // one second.
 				} catch (InterruptedException e) {
 					throw Bad("waitForPeer interruption: %s", e);
 				}
@@ -188,6 +191,7 @@ public class StoreServer extends BaseServer {
 		private synchronized void collectGarbage() {
 			long now = new Date().getTime();
 			Say("GC at %d", now);
+			// HashMap<String, Card> peers2 = (HashMap<String, Card>) peers.clone();  // HACK
 			for (String key : peers.keySet()) {
 				Card card = peers.get(key);
 				Say("... CARD timeout=%d me=%s you=%s v=%s", card.timeout - now, card.me, card.you, card.value);

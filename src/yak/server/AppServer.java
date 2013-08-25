@@ -33,9 +33,10 @@ public class AppServer extends BaseServer {
 				throw Bad("magicWord must be alphaNum.");
 			}
 
-			new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magic)).start();
+			// new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magic)).start();
 			
-			new AppServer(DEFAULT_PORT, magic,
+			new AppServer(
+					DEFAULT_PORT, magic,
 					Fmt("http://localhost:%d/%s", StoreServer.DEFAULT_PORT, magic),
 					null).run();
 		} catch (Exception e) {
@@ -52,6 +53,17 @@ public class AppServer extends BaseServer {
 		System.err.println(Fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, appMagicWord));
 		System.err.println(Fmt("Constructed storagePath=%s", DEFAULT_PORT, storagePath));
 	}
+	
+	private static String param(Request req, String key) {
+		String x = req.query.get(key);
+		if (x == null) {
+			Bad("Missing Query Parameter: %s", key); 
+		}
+		if (!IsAlphaNum(x)) {
+			Bad("Query Parameter Not AlphaNum: %s", CurlyEncode(key));
+		}
+		return x;
+	}
 
 	public Response handleRequest(Request req) {
 		Say("Req %s", req);
@@ -65,14 +77,6 @@ public class AppServer extends BaseServer {
 		}
 
 		String verb = req.query.get("verb");
-		
-		String path = req.query.get("path");
-		if (path != null) {
-			while (path.length() > 0 && path.charAt(0) == '/') {
-				path = path.substring(1);
-			}
-			verb = path;
-		}
 		
 		String query = req.query.get("query");
 		if (query != null) {
@@ -91,7 +95,7 @@ public class AppServer extends BaseServer {
 			if (verb.equals("Boot")) {
 				z = doVerbBoot();
 			} else if (verb.equals("Chan")) {
-				z = doVerbChan(channel);
+				z = doVerbChan(param(req, "c"));
 			} else if (verb.equals("Show")) {
 				z = doVerbShow(req.query);
 			} else if (verb.equals("Rendez")) {
@@ -122,11 +126,11 @@ public class AppServer extends BaseServer {
 	}
 
 	private String doVerbBoot() throws IOException {
-		return UseStore("Boot", "");
+		return UseStore("Boot");
 	}
 
 	private String doVerbChan(String channel) throws IOException {
-		String[] tnodes = UseStore("list", "c=" + channel).split("\n");
+		String[] tnodes = UseStore("list", "c", channel).split("\n");
 		String z = Fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
 		z += "<br><dl>\n";
 		for (String t : tnodes) {
@@ -135,15 +139,14 @@ public class AppServer extends BaseServer {
 			}
 			
 			z += "<dt><b>" + t + "</b><br>\n";
-			z += "<dd><pre>\n" + UseStore("fetch", Fmt("c=%s&t=%s", channel, t)) + "\n</pre>\n";
+			z += "<dd><pre>\n" + UseStore("fetch", "c", channel, "t", t) + "\n</pre>\n";
 		}
 		z += "</dl><p> OK.";
 		return z;
 	}
-	
 
 	private String doVerbRendez(HashMap<String,String> q) throws IOException {
-			int myNewCode = DH.randomInt(89999) + 10000;
+			int myNewCode = DH.randomInt(8999) + 1000;
 			return "Your code is " + myNewCode + "<P> Enter friend's code: <BR>"
 					+ "<form method=GET action=/>"
 							+ "<input type=text name=you><br>"
@@ -156,10 +159,12 @@ public class AppServer extends BaseServer {
 	private String doVerbRendez2(HashMap<String,String> q) throws IOException {
 		String x = ReadUrl(Fmt("%s?f=Rendez&me=%s&you=%s&v=%s",
 				storagePath, q.get("me"), q.get("you"), myDH.publicKey()));
+		
+		
+		
 		return new Ht("RENDEZ RESULT " + x).toString();
 	}
 	
-
 	private String doVerbShow(HashMap<String,String> q) throws IOException {
 		return new Ht(q.toString()).toString();
 	}
@@ -168,11 +173,15 @@ public class AppServer extends BaseServer {
 		this.storagePath = storagePath;
 	}
 	
-	public String UseStore(String verb, String args) throws IOException {
-		if (storagePath.equals("")) {
-			Bad("No storage Path in AppServer");
+	public String UseStore(String verb, String ...kvkv) throws IOException {
+		if (!storagePath.startsWith("htp://")) {
+			Bad("Bad StoragePath in AppServer: %s", UrlEncode(storagePath));
 		}
-		return ReadUrl(Fmt("%s?f=%s&%s", storagePath, verb, args));
+		String url = Fmt("%s?f=%s", storagePath, verb);
+		for (int i = 0; i < kvkv.length; i+=2) {
+			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
+		}
+		return ReadUrl(url);
 	}
 	
 	public static class Sessions {
@@ -186,6 +195,6 @@ public class AppServer extends BaseServer {
 	}
 
 	public static class Session {
-		public Profile.Self self;
+		public Profile.Persona self;
 	}
 }

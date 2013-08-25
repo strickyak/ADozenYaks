@@ -3,6 +3,8 @@ package yak.dozen;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -30,6 +32,7 @@ import yak.etc.DH;
 import yak.etc.Hash;
 import yak.etc.Yak;
 import yak.etc.Yak.FileIO;
+import yak.etc.Yak.JavaFileIO;
 import yak.server.AppServer;
 
 import android.net.Uri;
@@ -120,6 +123,8 @@ public class Yak12Activity extends Activity {
 				handleChannel777();
 			} else if (command.equals("Config")) {
 				handleConfig();
+			} else if (command.equals("URandom")) {
+				handleURandom();
 			} else if (command.equals("")) {
 				handleDefault();
 			} else {
@@ -136,7 +141,7 @@ public class Yak12Activity extends Activity {
 	public void initializeStoragePath() {
 		String storagePath = "";
 		try {
-			storagePath = fileIO.readFile("config.txt");
+			storagePath = fileIO.readTextFile("config.txt");
 		} catch (RuntimeException e) {
 			e.printStackTrace();
 		}
@@ -161,6 +166,19 @@ public class Yak12Activity extends Activity {
 	private void handleChannel777() throws ClientProtocolException, IOException {
 		appCaller.handleChannel777();
 	}
+	private void handleURandom() throws ClientProtocolException, IOException {
+		String s = "";
+		try {
+			DataInputStream br = fileIO.openURandom();
+			for (int i = 0; i < 32; i++) {
+				s += " " + br.readLong();
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			s = ex.toString();
+		}
+		displayText("URandom: " + s);
+	}
 
 	private void handleOther(Uri uri) throws ClientProtocolException, IOException {
 		appCaller.handleOther(uri);
@@ -172,13 +190,13 @@ public class Yak12Activity extends Activity {
 
 	private void handleDefault() {
 		displayList(new String[] { "Config", "*Rendez", "One", "Two", "Three", "Channel",
-				"Rendezvous", "dhdemo", "Channel777", "Channel0", });
+				"Rendezvous", "dhdemo", "Channel777", "Channel0", "URandom" });
 	}
 
 	private void handleConfig() {
 		String text = "";
 		try {
-			text = fileIO.readFile("config.txt");
+			text = fileIO.readTextFile("config.txt");
 		} catch (Exception e) {
 			toast(e.toString());
 		}
@@ -188,7 +206,7 @@ public class Yak12Activity extends Activity {
 		AnEditView editor = new AnEditView(text) {
 			@Override
 			public void onSave(String newText) {
-				fileIO.writeFile("config.txt", newText, false);
+				fileIO.writeTextFile("config.txt", newText, false);
 				server.setStoragePath(newText);
 				toast("Saved Config");
 				startIntent("/", null);
@@ -200,19 +218,29 @@ public class Yak12Activity extends Activity {
 	class AndroidFileIO extends Yak.FileIO {
 
 		@Override
-		protected BufferedReader openFileInput(String filename) throws FileNotFoundException {
-
+		public BufferedReader openTextFileInput(String filename) throws FileNotFoundException {
 			FileInputStream fis = Yak12Activity.this.openFileInput(filename);
 			InputStreamReader isr = new InputStreamReader(fis);
 			return new BufferedReader(isr);
 		}
 
 		@Override
-		protected PrintWriter openFileOutput(String filename, boolean worldly) throws IOException {
-
+		public PrintWriter openTextFileOutput(String filename, boolean worldly) throws IOException {
 			FileOutputStream fos = Yak12Activity.this.openFileOutput(filename,
 					worldly ? (Context.MODE_WORLD_READABLE | Context.MODE_WORLD_WRITEABLE) : Context.MODE_PRIVATE);
 			return new PrintWriter(new PrintStream(fos));
+		}
+
+		@Override
+		public DataInputStream openDataFileInput(String filename) throws FileNotFoundException {
+			FileInputStream fis = Yak12Activity.this.openFileInput(filename);
+			return new DataInputStream(fis);
+		}
+
+		@Override
+		public DataOutputStream openDataFileOutput(String filename) throws FileNotFoundException {
+			FileOutputStream fos = Yak12Activity.this.openFileOutput(filename, Context.MODE_PRIVATE);
+			return new DataOutputStream(fos);
 		}
 	}
 

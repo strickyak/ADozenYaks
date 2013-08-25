@@ -1,0 +1,23 @@
+define Room
+  String name = 1
+  String title = 2
+  repeated String member = 3
+
+define Friend
+  String name = 1
+  int hash = 2
+  String alias = 3
+  String dhpub = 4
+  repeated String hub = 5
+  String contact = 6
+  String remark = 7
+  repeated Room room = 8
+
+define Persona extends Friend
+  String dhsec = 9
+  repeated Friend friend = 10
+
+define Message
+  int direction = 1
+  String action = 2
+  String body = 3

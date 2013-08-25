@@ -2,6 +2,8 @@ package yak.etc;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -11,6 +13,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -438,14 +441,34 @@ public abstract class Yak {
 			throw Bad("Must Failed: (%s)", x);
 		}
 	}
- 
-	public static abstract class FileIO {
-		protected abstract BufferedReader openFileInput(String filename) throws FileNotFoundException;
-		protected abstract PrintWriter openFileOutput(String filename, boolean worldly) throws IOException;
 
-		public String readFile(String filename) {
+	// public static Charset utf8 = Charset.forName("utf-8");
+	public static byte[] StringToUtf8(String s) {
+		try {
+			return s.getBytes("utf-8");
+		} catch (UnsupportedEncodingException ex) {
+			 throw new RuntimeException(ex.toString());
+		}
+		// return s.getBytes(utf8);
+	}
+	public static String Utf8ToString(byte[] b) {
+		try {
+			return new String(b, "utf-8");
+		} catch (UnsupportedEncodingException ex) {
+			 throw new RuntimeException(ex.toString());
+		}
+		// return new String(b, utf8);
+	}
+	
+	public static abstract class FileIO {
+		public abstract BufferedReader openTextFileInput(String filename) throws FileNotFoundException;
+		public abstract PrintWriter openTextFileOutput(String filename, boolean worldly) throws IOException;
+		public abstract DataInputStream openDataFileInput(String filename) throws FileNotFoundException;
+		public abstract DataOutputStream openDataFileOutput(String filename) throws FileNotFoundException;
+
+		public String readTextFile(String filename) {
 			try {
-				BufferedReader br = openFileInput(filename);
+				BufferedReader br = openTextFileInput(filename);
 				StringBuilder sb = new StringBuilder();
 				while (true) {
 					String line = br.readLine();
@@ -460,9 +483,9 @@ public abstract class Yak {
 			}
 		}
 
-		public void writeFile(String filename, String content, boolean worldly) {
+		public void writeTextFile(String filename, String content, boolean worldly) {
 			try {
-				PrintWriter pw = openFileOutput(filename, worldly);
+				PrintWriter pw = openTextFileOutput(filename, worldly);
 				pw.print(content);
 				pw.flush();
 				pw.close();
@@ -473,18 +496,32 @@ public abstract class Yak {
 				throw new RuntimeException("Cannot writeFile: " + filename, e);
 			}
 		}
+		
+		public DataInputStream openURandom() throws FileNotFoundException {
+			return new DataInputStream(new FileInputStream("/dev/urandom"));
+		}
 	}
 	
 	public static class JavaFileIO extends FileIO {
 
 		@Override
-		protected BufferedReader openFileInput(String filename) throws FileNotFoundException {
+		public BufferedReader openTextFileInput(String filename) throws FileNotFoundException {
 			return new BufferedReader(new FileReader(new File(filename)));
 		}
 
 		@Override
-		protected PrintWriter openFileOutput(String filename, boolean worldly) throws IOException {
+		public PrintWriter openTextFileOutput(String filename, boolean worldly) throws IOException {
 			return new PrintWriter(new BufferedWriter(new FileWriter(filename)));
+		}
+
+		@Override
+		public DataInputStream openDataFileInput(String filename) throws FileNotFoundException {
+			return new DataInputStream(new FileInputStream(filename));
+		}
+
+		@Override
+		public DataOutputStream openDataFileOutput(String filename) throws FileNotFoundException {
+			return new DataOutputStream(new FileOutputStream(filename));
 		}
 	}
 }

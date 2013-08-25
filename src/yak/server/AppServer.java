@@ -195,6 +195,6 @@ public class AppServer extends BaseServer {
 	}
 
 	public static class Session {
-		public Profile.Persona self;
+		public Proto.Persona self;
 	}
 }

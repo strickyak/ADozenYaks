@@ -89,7 +89,7 @@ foreach cls [lsort [array names Classes]] {
 
 # Define the Pickle functions.
 foreach cls [lsort [array names Classes]] {
-  puts "  void Pickle$cls ($cls p, Bytes b) {"
+  puts "  public static void Pickle$cls ($cls p, Bytes b) {"
   foreach f [lsort $Fields($cls)] {
     set t $Type($cls,$f)
     if $Repeat($cls,$f) {
@@ -136,7 +136,7 @@ foreach cls [lsort [array names Classes]] {
 
 # Define the Unpickle functions.
 foreach cls [lsort [array names Classes]] {
-  puts "$cls Unpickle$cls (Bytes b) {"
+  puts "public static $cls Unpickle$cls (Bytes b) {"
   puts "  $cls z = new $cls ();"
   puts "  while (b.len > 0) {"
   puts "    int code = b.popVarInt();"

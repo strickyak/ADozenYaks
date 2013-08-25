@@ -5,8 +5,6 @@ import java.util.HashMap;
 
 import org.json.JSONObject;
 
-import yak.server.Profile;
-
 public class Json extends Yak {
 	public static class Parser {
 		byte[] bb; // string to be parsed

@@ -37,7 +37,7 @@ public class Proto {
     String name;
     String title;
   }
-  void PickleFriend (Friend p, Bytes b) {
+  public static void PickleFriend (Friend p, Bytes b) {
     if (p.alias != null) b.appendProtoString (3, p.alias);
     if (p.contact != null) b.appendProtoString (6, p.contact);
     if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
@@ -55,12 +55,12 @@ public class Proto {
     }
       } // next i
   }
-  void PickleMessage (Message p, Bytes b) {
+  public static void PickleMessage (Message p, Bytes b) {
     if (p.action != null) b.appendProtoString (2, p.action);
     if (p.body != null) b.appendProtoString (3, p.body);
     b.appendProtoInt (1, p.direction);
   }
-  void PicklePersona (Persona p, Bytes b) {
+  public static void PicklePersona (Persona p, Bytes b) {
     if (p.alias != null) b.appendProtoString (3, p.alias);
     if (p.contact != null) b.appendProtoString (6, p.contact);
     if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
@@ -86,14 +86,14 @@ public class Proto {
     }
       } // next i
   }
-  void PickleRoom (Room p, Bytes b) {
+  public static void PickleRoom (Room p, Bytes b) {
       for (int i = 0; i < p.member.size(); i++) {
     b.appendProtoString (3, p.member.get(i));
       } // next i
     if (p.name != null) b.appendProtoString (1, p.name);
     if (p.title != null) b.appendProtoString (2, p.title);
   }
-Friend UnpickleFriend (Bytes b) {
+public static Friend UnpickleFriend (Bytes b) {
   Friend z = new Friend ();
   while (b.len > 0) {
     int code = b.popVarInt();
@@ -114,7 +114,7 @@ Friend UnpickleFriend (Bytes b) {
   }  // end while
   return z;
 }  // end Unpickle Friend
-Message UnpickleMessage (Bytes b) {
+public static Message UnpickleMessage (Bytes b) {
   Message z = new Message ();
   while (b.len > 0) {
     int code = b.popVarInt();
@@ -126,7 +126,7 @@ Message UnpickleMessage (Bytes b) {
   }  // end while
   return z;
 }  // end Unpickle Message
-Persona UnpicklePersona (Bytes b) {
+public static Persona UnpicklePersona (Bytes b) {
   Persona z = new Persona ();
   while (b.len > 0) {
     int code = b.popVarInt();
@@ -153,7 +153,7 @@ Persona UnpicklePersona (Bytes b) {
   }  // end while
   return z;
 }  // end Unpickle Persona
-Room UnpickleRoom (Bytes b) {
+public static Room UnpickleRoom (Bytes b) {
   Room z = new Room ();
   while (b.len > 0) {
     int code = b.popVarInt();

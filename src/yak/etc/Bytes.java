@@ -132,5 +132,9 @@ public class Bytes extends Yak {
 		return z;
 	}
 	
-	
+	@Override
+	public String toString() {
+		return "Bytes[" + len + "](" + off + "," + arr.length + ")" + HexEncode(arr).substring(off*2, (off+len)*2)
+				+ "\n" + CurlyEncode(BytesToString(arr));
+	}
 }

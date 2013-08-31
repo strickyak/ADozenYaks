@@ -26,9 +26,15 @@ public class ProtoTest extends TestCase {
 		Bytes b = new Bytes();
 		Proto.PickleFriend(f, b);
 		
-		System.err.println("len=" + b.len + " : " + Yak.HexEncode(b.arr));
+		System.err.println("=" + b);
 		
 		Friend g = Proto.UnpickleFriend(b);
 		assertEquals("Eric", g.name);
 	}
+	
+	public static void main(String[] args) {
+		new ProtoTest().testFriend();
+	}
 }
+
+

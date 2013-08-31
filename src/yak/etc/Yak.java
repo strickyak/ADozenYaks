@@ -81,7 +81,7 @@ public abstract class Yak {
 		final int n = bytes.length;
 		char[] chars = new char[n];
 		for (int i = 0; i < n; i++) {
-			chars[i] = (char) bytes[i];
+			chars[i] = (char) (255&bytes[i]);
 		}
 		return String.valueOf(chars);
 	}

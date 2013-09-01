@@ -64,8 +64,9 @@ puts "package $package;
 
 import java.util.ArrayList;
 import yak.etc.Bytes;
+import yak.etc.Yak;
 
-public class Proto {
+public class Proto extends Yak {
 "
 
 # Define the classes.
@@ -144,6 +145,7 @@ foreach cls [lsort [array names Classes]] {
   puts "  $cls z = new $cls ();"
   puts "  while (b.len > 0) {"
   puts "    int code = b.popVarInt();"
+  puts "    System.err.println(Fmt(\"Code %d:%d\", code >> 3, code & 7));"
   puts "    switch (code) {"
   foreach f [lsort $Fields($cls)] {
     set t $Type($cls,$f)
@@ -182,7 +184,10 @@ foreach cls [lsort [array names Classes]] {
 	    }
 	  } ;# end switch
 	} ;# end if
+	puts "        break;"
   } ;# end foreach f
+  puts "      default:"
+  puts "        throw new RuntimeException(\"Bad tag code in $cls: \" + code); "
   puts "    }  // end switch"
   puts "  }  // end while"
   puts "  return z;"

@@ -2,8 +2,9 @@ package yak.server;
 
 import java.util.ArrayList;
 import yak.etc.Bytes;
+import yak.etc.Yak;
 
-public class Proto {
+public class Proto extends Yak {
 
   public static class Friend {
     String alias;
@@ -97,19 +98,30 @@ public static Friend UnpickleFriend (Bytes b) {
   Friend z = new Friend ();
   while (b.len > 0) {
     int code = b.popVarInt();
+    System.err.println(Fmt("Code %d:%d", code >> 3, code & 7));
     switch (code) {
       case (3 << 3) | 2: { z.alias = b.popVarString(); }
+        break;
       case (6 << 3) | 2: { z.contact = b.popVarString(); }
+        break;
       case (4 << 3) | 2: { z.dhpub = b.popVarString(); }
+        break;
       case (2 << 3) | 0: { z.hash = b.popVarInt(); }
+        break;
       case (5 << 3) | 2: { z.hub.add(b.popVarString()); }
+        break;
       case (1 << 3) | 2: { z.name = b.popVarString(); }
+        break;
       case (7 << 3) | 2: { z.remark = b.popVarString(); }
+        break;
       case (8 << 3) | 2: {
          Bytes b2 = b.popVarBytes();
          Room p2 = UnpickleRoom (b2);
          z.room.add(p2);
       } // end case
+        break;
+      default:
+        throw new RuntimeException("Bad tag code in Friend: " + code); 
     }  // end switch
   }  // end while
   return z;
@@ -118,10 +130,16 @@ public static Message UnpickleMessage (Bytes b) {
   Message z = new Message ();
   while (b.len > 0) {
     int code = b.popVarInt();
+    System.err.println(Fmt("Code %d:%d", code >> 3, code & 7));
     switch (code) {
       case (2 << 3) | 2: { z.action = b.popVarString(); }
+        break;
       case (3 << 3) | 2: { z.body = b.popVarString(); }
+        break;
       case (1 << 3) | 0: { z.direction = b.popVarInt(); }
+        break;
+      default:
+        throw new RuntimeException("Bad tag code in Message: " + code); 
     }  // end switch
   }  // end while
   return z;
@@ -130,25 +148,38 @@ public static Persona UnpicklePersona (Bytes b) {
   Persona z = new Persona ();
   while (b.len > 0) {
     int code = b.popVarInt();
+    System.err.println(Fmt("Code %d:%d", code >> 3, code & 7));
     switch (code) {
       case (3 << 3) | 2: { z.alias = b.popVarString(); }
+        break;
       case (6 << 3) | 2: { z.contact = b.popVarString(); }
+        break;
       case (4 << 3) | 2: { z.dhpub = b.popVarString(); }
+        break;
       case (9 << 3) | 2: { z.dhsec = b.popVarString(); }
+        break;
       case (10 << 3) | 2: {
          Bytes b2 = b.popVarBytes();
          Friend p2 = UnpickleFriend (b2);
          z.friend.add(p2);
       } // end case
+        break;
       case (2 << 3) | 0: { z.hash = b.popVarInt(); }
+        break;
       case (5 << 3) | 2: { z.hub.add(b.popVarString()); }
+        break;
       case (1 << 3) | 2: { z.name = b.popVarString(); }
+        break;
       case (7 << 3) | 2: { z.remark = b.popVarString(); }
+        break;
       case (8 << 3) | 2: {
          Bytes b2 = b.popVarBytes();
          Room p2 = UnpickleRoom (b2);
          z.room.add(p2);
       } // end case
+        break;
+      default:
+        throw new RuntimeException("Bad tag code in Persona: " + code); 
     }  // end switch
   }  // end while
   return z;
@@ -157,10 +188,16 @@ public static Room UnpickleRoom (Bytes b) {
   Room z = new Room ();
   while (b.len > 0) {
     int code = b.popVarInt();
+    System.err.println(Fmt("Code %d:%d", code >> 3, code & 7));
     switch (code) {
       case (3 << 3) | 2: { z.member.add(b.popVarString()); }
+        break;
       case (1 << 3) | 2: { z.name = b.popVarString(); }
+        break;
       case (2 << 3) | 2: { z.title = b.popVarString(); }
+        break;
+      default:
+        throw new RuntimeException("Bad tag code in Room: " + code); 
     }  // end switch
   }  // end while
   return z;

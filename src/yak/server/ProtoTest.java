@@ -36,6 +36,8 @@ public class ProtoTest /*extends TestCase*/ {
 	public void assertEquals(Object a, Object b) {
 		if (!a.equals(b)) {
 			throw new RuntimeException(Yak.Fmt("Assertion Failure: assertEquals:\na=%s\nb=%s", a, b));
+		} else {
+			System.err.println("OK: " + b);
 		}
 	}
 	

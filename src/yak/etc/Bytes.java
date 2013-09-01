@@ -112,6 +112,7 @@ public class Bytes extends Yak {
 			z |= ((b & 127) << shift);
 			shift += 7;
 		}
+		System.err.println(Fmt("popVarInt %d off=%d len=%d", z, off, len));
 		return z;
 	}
 
@@ -132,12 +133,13 @@ public class Bytes extends Yak {
 	}
 	
 	public byte popByte() {
+		if (len <= 0) {
+			throw Bad("Popped a byte too many (%d)", len);
+		}
 		byte z = arr[off];
 		++off;
 		--len;
-		if (len < 0) {
-			throw Bad("Popped a byte too many");
-		}
+		System.err.println(Fmt("popByte x%02x off=%d len=%d", z, off, len));
 		return z;
 	}
 	

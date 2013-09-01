@@ -30,6 +30,10 @@ public class Bytes extends Yak {
 		this.len = len;
 	}
 	
+	public Bytes(byte[] a) {
+		this(a, 0, a.length);
+	}
+	
 	public Bytes(Bytes a) {
 		this(a.arr, a.off, a.len);
 	}
@@ -92,9 +96,19 @@ public class Bytes extends Yak {
 		int code = (tag << 3) | 2;
 		appendVarInt(code);
 		appendVarInt(a.len);
+		appendBytes(a);
+	}
+	
+	public void appendBytes(Bytes a) {
 		growCapBy(a.len);
 		System.arraycopy(a.arr, a.off, arr, off+len, a.len);
 		len += a.len;
+	}
+	
+	public void appendBytes(byte[] a) {
+		growCapBy(a.length);
+		System.arraycopy(a, 0, arr, off+len, a.length);
+		len += a.length;
 	}
 
 	public void appendProtoInt(int tag, int x) {
@@ -131,6 +145,16 @@ public class Bytes extends Yak {
 		len -= n;
 		return z;
 	}
+	public byte[] popByteArray(int n) {
+		if (len < n) {
+			throw Bad("Not enough to pop %d bytes: %d", n, len);
+		}
+		byte[] z = new byte[n];
+		System.arraycopy(arr, off, z, 0, n);
+		off += n;
+		len -= n;
+		return z;
+	}
 	
 	public byte popByte() {
 		if (len <= 0) {
@@ -141,6 +165,26 @@ public class Bytes extends Yak {
 		--len;
 		System.err.println(Fmt("popByte x%02x off=%d len=%d", z, off, len));
 		return z;
+	}
+	
+	public boolean equalsBytes(byte[] b) {
+		if (b.length != len)
+			return false;
+		for (int i = 0; i < len; i++) {
+			if (b[i] != arr[off+i])
+				return false;
+		}
+		return true;
+	}
+	
+	public static boolean equalsBytes(byte[] a, byte[] b) {
+		if (b.length != b.length)
+			return false;
+		for (int i = 0; i < a.length; i++) {
+			if (a[i] != b[i])
+				return false;
+		}
+		return true;
 	}
 	
 	@Override

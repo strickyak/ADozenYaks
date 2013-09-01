@@ -276,8 +276,8 @@ public class Yak12Activity extends Activity {
 
 		Hash key = new Hash("mumble");
 		String plain = "I wish I were an Oscar Mayer Wiener\000.";
-		String encr = key.Encrypt(plain, 31415);
-		String recover = key.Decrypt(encr, 31415);
+		String encr = key.oldEncrypt(plain, 31415);
+		String recover = key.oldDecrypt(encr, 31415);
 
 		String html = "<html><body><ul>";
 		html += "<li> secA = " + secA;

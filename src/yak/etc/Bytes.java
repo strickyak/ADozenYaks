@@ -157,24 +157,25 @@ public class Bytes extends Yak {
 		try {
 			while (a.len > 0) {
 				sb.append("..." + CurlyEncode(BytesToString(cleanArray())) + "...\n");
-				int t = popVarInt();
+				int t = a.popVarInt();
 				int tag = t >>> 3;
 				int type = t & 7;
-				sb.append(Fmt("T(%d)tag(%d)type(%d)=", t, tag, type));
+				sb.append(Fmt("T(%d)tag(%d)type(%d)= ", t, tag, type));
 				switch (type) {
 					case 0: {
-						int x = popVarInt();
-						sb.append("int=" + x);
+						int x = a.popVarInt();
+						sb.append("int= " + x);
 					}
 					break;
 					case 2: {
-						String x = popVarString();
-						sb.append("str=" + CurlyEncode(x));
+						String x = a.popVarString();
+						sb.append("str= " + CurlyEncode(x));
 					}
 				}
 				sb.append("\n");
 			}
 		} catch (Exception ex) {
+			ex.printStackTrace();
 			sb.append("#Exception#" + ex);
 		}
 		return sb.toString();

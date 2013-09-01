@@ -87,10 +87,14 @@ foreach cls [lsort [array names Classes]] {
   puts "  }"
 }
 
+proc CmpFieldNumbers {cls f1 f2} {
+  expr { $::Number($cls,$f1) > $::Number($cls,$f2) }
+ }
+
 # Define the Pickle functions.
 foreach cls [lsort [array names Classes]] {
   puts "  public static void Pickle$cls ($cls p, Bytes b) {"
-  foreach f [lsort $Fields($cls)] {
+  foreach f [lsort -command "CmpFieldNumbers $cls" $Fields($cls)] {
     set t $Type($cls,$f)
     if $Repeat($cls,$f) {
 	  # Repeated

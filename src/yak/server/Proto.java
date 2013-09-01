@@ -38,14 +38,14 @@ public class Proto {
     String title;
   }
   public static void PickleFriend (Friend p, Bytes b) {
-    if (p.alias != null) b.appendProtoString (3, p.alias);
-    if (p.contact != null) b.appendProtoString (6, p.contact);
-    if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
+    if (p.name != null) b.appendProtoString (1, p.name);
     b.appendProtoInt (2, p.hash);
+    if (p.alias != null) b.appendProtoString (3, p.alias);
+    if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
       for (int i = 0; i < p.hub.size(); i++) {
     b.appendProtoString (5, p.hub.get(i));
       } // next i
-    if (p.name != null) b.appendProtoString (1, p.name);
+    if (p.contact != null) b.appendProtoString (6, p.contact);
     if (p.remark != null) b.appendProtoString (7, p.remark);
       for (int i = 0; i < p.room.size(); i++) {
     if (p.room.get(i) != null) {
@@ -56,27 +56,19 @@ public class Proto {
       } // next i
   }
   public static void PickleMessage (Message p, Bytes b) {
+    b.appendProtoInt (1, p.direction);
     if (p.action != null) b.appendProtoString (2, p.action);
     if (p.body != null) b.appendProtoString (3, p.body);
-    b.appendProtoInt (1, p.direction);
   }
   public static void PicklePersona (Persona p, Bytes b) {
-    if (p.alias != null) b.appendProtoString (3, p.alias);
-    if (p.contact != null) b.appendProtoString (6, p.contact);
-    if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
-    if (p.dhsec != null) b.appendProtoString (9, p.dhsec);
-      for (int i = 0; i < p.friend.size(); i++) {
-    if (p.friend.get(i) != null) {
-      Bytes b2 = new Bytes();
-      PickleFriend (p.friend.get(i), b2);
-	  b.appendProtoBytes (10, b2);
-    }
-      } // next i
+    if (p.name != null) b.appendProtoString (1, p.name);
     b.appendProtoInt (2, p.hash);
+    if (p.alias != null) b.appendProtoString (3, p.alias);
+    if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
       for (int i = 0; i < p.hub.size(); i++) {
     b.appendProtoString (5, p.hub.get(i));
       } // next i
-    if (p.name != null) b.appendProtoString (1, p.name);
+    if (p.contact != null) b.appendProtoString (6, p.contact);
     if (p.remark != null) b.appendProtoString (7, p.remark);
       for (int i = 0; i < p.room.size(); i++) {
     if (p.room.get(i) != null) {
@@ -85,13 +77,21 @@ public class Proto {
 	  b.appendProtoBytes (8, b2);
     }
       } // next i
+    if (p.dhsec != null) b.appendProtoString (9, p.dhsec);
+      for (int i = 0; i < p.friend.size(); i++) {
+    if (p.friend.get(i) != null) {
+      Bytes b2 = new Bytes();
+      PickleFriend (p.friend.get(i), b2);
+	  b.appendProtoBytes (10, b2);
+    }
+      } // next i
   }
   public static void PickleRoom (Room p, Bytes b) {
+    if (p.name != null) b.appendProtoString (1, p.name);
+    if (p.title != null) b.appendProtoString (2, p.title);
       for (int i = 0; i < p.member.size(); i++) {
     b.appendProtoString (3, p.member.get(i));
       } // next i
-    if (p.name != null) b.appendProtoString (1, p.name);
-    if (p.title != null) b.appendProtoString (2, p.title);
   }
 public static Friend UnpickleFriend (Bytes b) {
   Friend z = new Friend ();

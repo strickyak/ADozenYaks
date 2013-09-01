@@ -264,7 +264,7 @@ public abstract class Yak {
 		URLConnection conn = url.openConnection();
 		conn.connect();
 		InputStream in = (InputStream) conn.getContent();
-		System.err.println("RESULT=" + in);
+		Say("RESULT=" + in);
 
 		String s = ReadAll(in);
 		return s;

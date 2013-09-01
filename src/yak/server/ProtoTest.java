@@ -21,23 +21,35 @@ public class ProtoTest /*extends TestCase*/ {
 		r2.name = "Hole";
 		r2.member.add("Xander");
 		r2.member.add("Yves");
+		r2.member.add("Zoe");
 		f.room.add(r2);
 		
 		Bytes b = new Bytes();
 		Proto.PickleFriend(f, b);
 
-		System.err.println("=" + b);
-		System.err.println("=" + b.showProto());
+		Yak.Say("=" + b);
+		Yak.Say("=" + b.showProto());
 		
 		Friend g = Proto.UnpickleFriend(b);
 		assertEquals("Eric", g.name);
+		assertEquals(888, g.hash);
+		
+		assertEquals(2, g.room.size());
+		assertEquals("Lobby", g.room.get(0).name);
+		assertEquals("Hole", g.room.get(1).name);
+		
+		assertEquals(2, g.room.get(0).member.size());
+		assertEquals(3, g.room.get(1).member.size());
+		assertEquals("Alice", g.room.get(0).member.get(0));
+		assertEquals("Bob", g.room.get(0).member.get(1));
+		assertEquals("Zoe", g.room.get(1).member.get(2));
 	}
 	
 	public void assertEquals(Object a, Object b) {
 		if (!a.equals(b)) {
 			throw new RuntimeException(Yak.Fmt("Assertion Failure: assertEquals:\na=%s\nb=%s", a, b));
 		} else {
-			System.err.println("OK: " + b);
+			Yak.Say("OK: " + b);
 		}
 	}
 	

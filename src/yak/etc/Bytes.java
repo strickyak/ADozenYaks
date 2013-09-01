@@ -30,6 +30,10 @@ public class Bytes extends Yak {
 		this.len = len;
 	}
 	
+	public Bytes(Bytes a) {
+		this(a.arr, a.off, a.len);
+	}
+	
 	void growCapBy(int n) {
 		growCapTo(len + n);
 	}
@@ -55,6 +59,7 @@ public class Bytes extends Yak {
 	}
 	
 	void appendVarInt(int x) {
+		System.err.println(Fmt("appendVarInt<<< %d", x));
 		while (x >= 128) {
 			byte z = (byte) ((x&127) | 128);
 			appendByte(z);
@@ -64,6 +69,7 @@ public class Bytes extends Yak {
 	}
 	
 	void appendByte(byte x) {
+		System.err.println(Fmt("appendByte<<< %02x  >>> (len=%d)", x, len+1));
 		growCapBy(1);
 		arr[off + len] = x;
 		++len;
@@ -71,7 +77,10 @@ public class Bytes extends Yak {
 
 	public void appendProtoString(int tag, String s) {
 		byte[] a = StringToBytes(s);
+		System.err.println(Fmt("appendProtoString %d: <<< [%d] %s", tag, s.length(), CurlyEncode(s)));
 		appendProtoBytes(tag, a);
+
+		System.err.println(Fmt("  >>> (len=%d) .... %s ", len, this));
 	}
 
 	public void appendProtoBytes(int tag, byte[] x) {
@@ -79,6 +88,7 @@ public class Bytes extends Yak {
 	}
 
 	public void appendProtoBytes(int tag, Bytes a) {
+		System.err.println(Fmt("appendProtoString %d: <<< [%d] %s", tag, a.len, HexEncode(a.cleanArray())));
 		int code = (tag << 3) | 2;
 		appendVarInt(code);
 		appendVarInt(a.len);
@@ -107,8 +117,7 @@ public class Bytes extends Yak {
 
 	public String popVarString() {
 		Bytes b = popVarBytes();
-		byte[] z = new byte[b.len];
-		System.arraycopy(b.arr, b.off, z, 0, b.len);
+		byte[] z = Bytes.makeArraySliceLen(b.arr, b.off, b.len);
 		return Utf8ToString(z);
 	}
 	public Bytes popVarBytes() {
@@ -134,7 +143,46 @@ public class Bytes extends Yak {
 	
 	@Override
 	public String toString() {
-		return "Bytes[" + len + "](" + off + "," + arr.length + ")" + HexEncode(arr).substring(off*2, (off+len)*2)
-				+ "\n" + CurlyEncode(BytesToString(arr));
+		byte[] z = makeArraySliceLen(arr, off, len);
+		return "Bytes[" + len + "](" + off + "," + arr.length + ")" + CurlyEncode(BytesToString(z));
+	}
+	
+	public byte[] cleanArray() {
+		return makeArraySliceLen(arr, off, len);
+	}
+	
+	public String showProto() {
+		Bytes a = new Bytes(this);
+		StringBuffer sb = new StringBuffer();
+		try {
+			while (a.len > 0) {
+				sb.append("..." + CurlyEncode(BytesToString(cleanArray())) + "...\n");
+				int t = popVarInt();
+				int tag = t >>> 3;
+				int type = t & 7;
+				sb.append(Fmt("T(%d)tag(%d)type(%d)=", t, tag, type));
+				switch (type) {
+					case 0: {
+						int x = popVarInt();
+						sb.append("int=" + x);
+					}
+					break;
+					case 2: {
+						String x = popVarString();
+						sb.append("str=" + CurlyEncode(x));
+					}
+				}
+				sb.append("\n");
+			}
+		} catch (Exception ex) {
+			sb.append("#Exception#" + ex);
+		}
+		return sb.toString();
+	}
+	
+	public static byte[] makeArraySliceLen(byte[] a, int begin, int n) {
+		byte[] z = new byte[n];
+		System.arraycopy(a, begin, z, 0, n);
+		return z;
 	}
 }

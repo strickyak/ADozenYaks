@@ -6,7 +6,7 @@ import yak.server.Proto.Friend;
 import yak.server.Proto.Room;
 import junit.framework.TestCase;
 
-public class ProtoTest extends TestCase {
+public class ProtoTest /*extends TestCase*/ {
 
 	public void testFriend() {
 		Friend f = new Friend();
@@ -18,18 +18,25 @@ public class ProtoTest extends TestCase {
 		r1.member.add("Bob");
 		f.room.add(r1);
 		Room r2 = new Room();
-		r1.name = "Hole";
-		r1.member.add("Xander");
-		r1.member.add("Yves");
+		r2.name = "Hole";
+		r2.member.add("Xander");
+		r2.member.add("Yves");
 		f.room.add(r2);
 		
 		Bytes b = new Bytes();
 		Proto.PickleFriend(f, b);
-		
+
 		System.err.println("=" + b);
+		System.err.println("=" + b.showProto());
 		
 		Friend g = Proto.UnpickleFriend(b);
 		assertEquals("Eric", g.name);
+	}
+	
+	public void assertEquals(Object a, Object b) {
+		if (!a.equals(b)) {
+			throw new RuntimeException(Yak.Fmt("Assertion Failure: assertEquals:\na=%s\nb=%s", a, b));
+		}
 	}
 	
 	public static void main(String[] args) {

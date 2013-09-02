@@ -6,6 +6,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 
+import org.apache.http.HttpEntity;
+
 import android.util.Log;
 
 import yak.etc.BaseServer;
@@ -16,12 +18,12 @@ import yak.etc.Yak;
 
 public class AppServer extends BaseServer {
 	
-	public static final int DEFAULT_PORT = 4004;
+	public static final int DEFAULT_PORT = 30331;
 	private String appMagicWord;
 	private String storagePath;
 	private FileIO fileIO;
 	
-	private DH myDH = DH.RandomKey();
+	private DH myDH = null;
 	
 	public static void main(String[] args) {
 		try {
@@ -145,17 +147,34 @@ public class AppServer extends BaseServer {
 		return z;
 	}
 
-	private String doVerbRendez(HashMap<String,String> q) throws IOException {
+    /** doVerbRendez tells our peer code and requests peer code of future pal. */
+	private Ht doVerbRendez(HashMap<String,String> q) throws IOException {
 			int myNewCode = DH.randomInt(8999) + 1000;
-			return "Your code is " + myNewCode + "<P> Enter friend's code: <BR>"
-					+ "<form method=GET action=/>"
-							+ "<input type=text name=you><br>"
-							+ "<input type=hidden name=me value=" + myNewCode + ">"
-							+ "<input type=hidden name=verb value=Rendez2>"
-					+ "<input type=submit>"
-					+ "</form>";
+//			return "<form method=GET action=\"/\" >"
+//			   		+   "Your code is " + myNewCode + "<P> Enter friend's code: <BR>"
+//					+   "<input type=text name=you><br>"
+//					+   "<input type=hidden name=me value=" + myNewCode + ">"
+//					+   "<input type=hidden name=verb value=Rendez2>"
+//					+   "<input type=submit>"
+//					+ "</form>";
+			Ht text = new Ht("Your code is " + myNewCode + "<P> Enter friend's code: <BR>");
+			Ht body = new Ht();
+			body.append("Your code is " + myNewCode);
+			Ht.tag(body, "p", null);
+			body.append("Enter new friend's code:");
+			Ht.tag(body, "br", null);
+			Ht.tag(body, "input", strings("type", "text", "name", "you"));
+			Ht.tag(body, "br", null);
+
+			Ht.tag(body, "input", strings("type", "hidden", "name", "me", "value", myNewCode));
+			Ht.tag(body, "input", strings("type", "hidden", "name", "verb", "value", "Rendez2"));
+			Ht.tag(body, "input", strings("type", "submit"));
+			return Ht.tag(null, "form", strings(
+					"method", "GET",
+					"action", "/" + appMagicWord), body);
 	}
 	
+	/** doVerbRendez2 does the DH Public Key Exchange. */
 	private String doVerbRendez2(HashMap<String,String> q) throws IOException {
 		String x = ReadUrl(Fmt("%s?f=Rendez&me=%s&you=%s&v=%s",
 				storagePath, q.get("me"), q.get("you"), myDH.publicKey()));
@@ -182,5 +201,13 @@ public class AppServer extends BaseServer {
 			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
 		}
 		return ReadUrl(url);
+	}
+
+	public Ht makeAppLink(String text, String verb, String ...kvkv) {
+		String url = Fmt("/%s?f=%s", appMagicWord, verb);
+		for (int i = 0; i < kvkv.length; i+=2) {
+			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
+		}
+		return Ht.tag(null, "a", strings("href", url), text);
 	}
 }

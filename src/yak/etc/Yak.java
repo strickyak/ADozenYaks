@@ -28,6 +28,10 @@ import android.content.Context;
 
 public abstract class Yak {
 
+	public static String[] strings(String ...args) {
+		return args;
+	}
+	
 	public static byte[] LongToBlock16(long a) {
 		byte[] z = new byte[16];
 		z[0] = (byte) a;

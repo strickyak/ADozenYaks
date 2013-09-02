@@ -106,7 +106,7 @@ public class Hash extends Yak {
 			Bytes z = new Bytes(iv);  // Result begins with iv
 			Say("1: %d: %s", z.len, z);
 			z.appendBytes(x1);         // followed by encrypted hash & data.
-			z.appendBytes(x2);         // followed by encrypted hash & data.
+			z.appendBytes(x2);
 			Say("2: %d: %s", z.len, z);
 			return z;
 		} catch (Exception e) {

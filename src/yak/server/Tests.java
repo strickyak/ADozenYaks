@@ -1,12 +1,21 @@
 package yak.server;
 
 import yak.etc.Bytes;
+import yak.etc.Hash;
 import yak.etc.Yak;
 import yak.server.Proto.Friend;
 import yak.server.Proto.Room;
 import junit.framework.TestCase;
 
-public class ProtoTest /*extends TestCase*/ {
+public class Tests extends Yak {
+
+	public void testEncrypt() {
+		Hash key = new Hash("This is the key.");
+		Bytes plain = new Bytes(StringToBytes("plaintext"));
+		Bytes encrypted = key.encryptBytes(plain);
+		Bytes decrypted = key.decryptBytes(encrypted);
+		assertEquals(true, Bytes.equalsBytes(plain.asByteArray(), decrypted.asByteArray()));
+	}
 
 	public void testFriend() {
 		Friend f = new Friend();
@@ -54,7 +63,8 @@ public class ProtoTest /*extends TestCase*/ {
 	}
 	
 	public static void main(String[] args) {
-		new ProtoTest().testFriend();
+		new Tests().testFriend();
+		new Tests().testEncrypt();
 	}
 }
 

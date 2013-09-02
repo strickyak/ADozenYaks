@@ -129,6 +129,10 @@ public abstract class Yak {
 		return sb.toString();
 	}
 
+	public static String CurlyEncode(byte[] b) {
+		return CurlyEncode(BytesToString(b));
+	}
+	
 	public static String CurlyEncode(String s) {
 		final int n = s.length();
 		if (n == 0) {

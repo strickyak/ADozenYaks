@@ -92,7 +92,7 @@ public class Bytes extends Yak {
 	}
 
 	public void appendProtoBytes(int tag, Bytes a) {
-		System.err.println(Fmt("appendProtoString %d: <<< [%d] %s", tag, a.len, HexEncode(a.cleanArray())));
+		System.err.println(Fmt("appendProtoString %d: <<< [%d] %s", tag, a.len, HexEncode(a.asByteArray())));
 		int code = (tag << 3) | 2;
 		appendVarInt(code);
 		appendVarInt(a.len);
@@ -193,7 +193,7 @@ public class Bytes extends Yak {
 		return "Bytes[" + len + "](" + off + "," + arr.length + ")" + CurlyEncode(BytesToString(z));
 	}
 	
-	public byte[] cleanArray() {
+	public byte[] asByteArray() {
 		return makeArraySliceLen(arr, off, len);
 	}
 	
@@ -202,7 +202,7 @@ public class Bytes extends Yak {
 		StringBuffer sb = new StringBuffer();
 		try {
 			while (a.len > 0) {
-				sb.append("..." + CurlyEncode(BytesToString(cleanArray())) + "...\n");
+				sb.append("..." + CurlyEncode(BytesToString(asByteArray())) + "...\n");
 				int t = a.popVarInt();
 				int tag = t >>> 3;
 				int type = t & 7;

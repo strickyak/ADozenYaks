@@ -7,7 +7,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.http.HttpEntity;
 
@@ -104,11 +107,16 @@ public class AppServer extends BaseServer {
 		String tnode = req.query.get("t");
 		String latest = req.query.get("latest");
 		String value = req.query.get("v");
-		verb = (verb == null) ? "null" : verb;
 		String z = "!";
 
 		try {
-			if (verb.equals("Boot")) {
+			if (verb == null || verb.equals("") || verb.equals("Top")) {
+				z = doTop().toString();
+			} else if (verb.equals("Persona")) {
+				z = doVerbPersona(req.query).toString();
+			} else if (verb.equals("MakePersona")) {
+				z = doVerbMakePersona(req.query).toString();
+			} else if (verb.equals("Boot")) {
 				z = doVerbBoot();
 			} else if (verb.equals("Chan")) {
 				z = doVerbChan(param(req, "c"));
@@ -118,6 +126,8 @@ public class AppServer extends BaseServer {
 				z = doVerbRendez(req.query).toString();
 			} else if (verb.equals("Rendez2")) {
 				z = doVerbRendez2(req.query).toString();
+			} else if (verb.equals("Rendez3")) {
+				z = doVerbRendez3(req.query).toString();
 			} else {
 				throw new Exception("bad Verb: " + verb);
 			}
@@ -130,19 +140,79 @@ public class AppServer extends BaseServer {
 		return new Response(z, 200, "text/html");
 	}
 
-	private String doUri(String uri) throws IOException {
-		String a = uri.toString();
-		if (a.startsWith("yak12:")) {
-			a = a.substring(6);
-		}
-		System.err.println("+++ doUri: <" + a);
-		String z = htmlEscape("URI IS " + CurlyEncode(a));
-		System.err.println("+++ doUri: >" + z);
-		return z;
-	}
+//	private String doUri(String uri) throws IOException {
+//		String a = uri.toString();
+//		if (a.startsWith("yak12:")) {
+//			a = a.substring(6);
+//		}
+//		System.err.println("+++ doUri: <" + a);
+//		String z = htmlEscape("URI IS " + CurlyEncode(a));
+//		System.err.println("+++ doUri: >" + z);
+//		return z;
+//	}
 
 	private String doVerbBoot() throws IOException {
 		return UseStore("Boot");
+	}
+	
+	private Ht doTop() {
+		String[] files = fileIO.listFiles();
+		Pattern p = Pattern.compile("dozen_([a-z][a-z0-9]*)\\.pb");
+		ArrayList<String> personas = new ArrayList<String>();
+		for (String f : files) {
+			Say("File: %s", f);
+			Matcher m = p.matcher(f);
+			if (m.matches()) {
+				Say("Matched: %s", m.group(1));
+				personas.add(m.group(1));
+			}
+		}
+		
+		Ht z = new Ht();
+		if (personas.isEmpty()) {
+			z.append("No personas have been created.");
+		} else {
+			z.append("Pick which persona to use:");
+			Ht choices = new Ht();
+			for (String name : personas) {
+				Ht.tag(choices, "li", null, makeAppLink(name, "Persona", "name", name));
+			}
+			Ht.tag(z, "ul", null, choices);
+		}
+		Ht.tag(z, "hr", null);
+		
+		z.append("Make a new persona named:");
+		Ht.tag(z, "input", strings("type", "text", "name", "name"));
+		Ht.tag(z, "input", strings("type", "hidden", "name", "verb", "value", "MakePersona"));
+		Ht.tag(z, "input", strings("type", "submit"));
+		
+		return Ht.tag(null, "form", strings("method", "GET", "action", action()), z);
+	}
+	
+	private Ht doVerbMakePersona(HashMap<String, String> q) {
+		String name = q.get("name");
+		
+		myDH = DH.RandomKey();
+		
+		persona = new Persona();
+		persona.name = name;
+		persona.dhsec = myDH.toString();
+		persona.dhpub = myDH.publicKey().toString();
+		persona.hash = new Hash(persona.dhpub).asShortString();
+				
+		savePersona();
+		
+		Ht z = new Ht(Fmt("Saved Persona '%s'.", name));
+		Ht.tag(z, "p", null);
+		z.append(makeAppLink("TOP", "Top"));
+		return z;
+	}
+	
+	private Ht doVerbPersona(HashMap<String, String> q) {
+		String name = q.get("name");
+		loadPersona(name);
+		
+		return new Ht(Fmt("Loaded Persona '%s'", name));
 	}
 
 	private String doVerbChan(String channel) throws IOException {
@@ -257,7 +327,7 @@ public class AppServer extends BaseServer {
 		Bytes b = new Bytes();
 		Proto.PicklePersona(persona, b);
 		try {
-			DataOutputStream dos = fileIO.openDataFileOutput(Fmt("dozen_%s.txt", persona.name));
+			DataOutputStream dos = fileIO.openDataFileOutput(Fmt("dozen_%s.pb", persona.name));
 			dos.write(b.arr, b.off, b.len);
 			dos.close();
 		} catch (IOException e) {
@@ -267,7 +337,7 @@ public class AppServer extends BaseServer {
 	}
 	private void loadPersona(String name) {
 		try {
-			DataInputStream dis = fileIO.openDataFileInput(Fmt("dozen_%s.txt", name));
+			DataInputStream dis = fileIO.openDataFileInput(Fmt("dozen_%s.pb", name));
 			int avail = dis.available();
 			byte[] b = new byte[avail];
 			dis.readFully(b);
@@ -329,10 +399,14 @@ public class AppServer extends BaseServer {
 	}
 
 	public Ht makeAppLink(String text, String verb, String ...kvkv) {
-		String url = Fmt("/%s?f=%s", appMagicWord, verb);
+		String url = Fmt("/%s?verb=%s", appMagicWord, verb);
+		Say("makeAppLink: start: {%s}", url);
 		for (int i = 0; i < kvkv.length; i+=2) {
 			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
+			Say("makeAppLink: added: {%s} {%s} -> {%s}", kvkv[i], kvkv[i+1], url);
 		}
-		return Ht.tag(null, "a", strings("href", url), text);
+		Ht z = Ht.tag(null, "a", strings("href", url), text);
+		Say("makeAppLink: z: {%s}", z);
+		return z;
 	}
 }

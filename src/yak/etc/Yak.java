@@ -95,14 +95,14 @@ public abstract class Yak {
 	}
 	
 	public static String UrlEncode(String s) {
-		String z = "?";
 		try {
-			z = URLEncoder.encode(s, "utf-8");
+			String z = URLEncoder.encode(s, "utf-8");
+			Say("UrlEncode: {%s} -> {%s}", s, z);
+			return z;
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-			Bad("UrlEncode(): " + e);
+			throw Bad("UrlEncode(): " + e);
 		}
-		return z;
 	}
 
 	public static String UrlDecode(String s) {
@@ -291,14 +291,19 @@ public abstract class Yak {
 				switch (c) {
 				case '<':
 					sb.append("&lt;");
+					break;
 				case '>':
 					sb.append("&gt;");
+					break;
 				case '&':
 					sb.append("&amp;");
+					break;
 				case '"':
 					sb.append("&quot;");
+					break;
 				case '\n':
 					sb.append(lineBreaks ? "<br>" : "&#10;");
+					break;
 				default:
 					sb.append(c);
 				}
@@ -360,30 +365,34 @@ public abstract class Yak {
 		static public Ht tag(Ht appendMe, String type, String[] args, Ht body) {
 			Ht z = appendMe == null ? new Ht() : appendMe;
 			assert htmlTagP.matcher(type).matches();
+			Say("HT TAG TYPE: %s", type);
 			z.sb.append(Fmt("<%s ", type));
 			if (args != null) {
 				for (int i = 0; i < args.length; i += 2) {
 					assert htmlTagP.matcher(args[i]).matches();
+					Say("HT TAG PARAM: %s -> {%s}", args[i], args[i+1]);
 					z.sb.append(Fmt("%s=\"%s\" ", args[i],
 							htmlEscape(args[i + 1])));
 				}
 			}
-			z.sb.append(Fmt(">%s</%s>", body, type));
+			z.sb.append(Fmt(">%s</%s\n>", body, type));
 			return z;
 		}
 
 		static public Ht tag(Ht appendMe, String type, String[] args) {
 			Ht z = appendMe == null ? new Ht() : appendMe;
 			assert htmlTagP.matcher(type).matches();
+			Say("HT TAG TYPE: %s", type);
 			z.sb.append(Fmt("<%s ", type));
 			if (args != null) {
 				for (int i = 0; i < args.length; i += 2) {
 					assert htmlTagP.matcher(args[i]).matches();
+					Say("HT TAG PARAM: %s -> {%s}", args[i], args[i+1]);
 					z.sb.append(Fmt("%s=\"%s\" ", args[i],
 							htmlEscape(args[i + 1])));
 				}
 			}
-			z.sb.append(" />");
+			z.sb.append(" /\n>");
 			return z;
 		}
 	}
@@ -473,6 +482,11 @@ public abstract class Yak {
 		public abstract PrintWriter openTextFileOutput(String filename, boolean worldly) throws IOException;
 		public abstract DataInputStream openDataFileInput(String filename) throws FileNotFoundException;
 		public abstract DataOutputStream openDataFileOutput(String filename) throws FileNotFoundException;
+		
+		public String[] listFiles() {
+			File dot = new File(".");
+			return dot.list();
+		}
 
 		public String readTextFile(String filename) {
 			try {

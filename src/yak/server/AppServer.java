@@ -1,6 +1,9 @@
 package yak.server;
 
 import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -11,10 +14,16 @@ import org.apache.http.HttpEntity;
 import android.util.Log;
 
 import yak.etc.BaseServer;
+import yak.etc.Bytes;
 import yak.etc.DH;
+import yak.etc.Hash;
 import yak.etc.BaseServer.Request;
 import yak.etc.BaseServer.Response;
+import yak.etc.Yak.Ht;
 import yak.etc.Yak;
+import yak.server.Proto.Friend;
+import yak.server.Proto.Persona;
+import yak.server.Proto.Room;
 
 public class AppServer extends BaseServer {
 	
@@ -22,6 +31,7 @@ public class AppServer extends BaseServer {
 	private String appMagicWord;
 	private String storagePath;
 	private FileIO fileIO;
+	private Persona persona;
 	
 	private DH myDH = null;
 	
@@ -54,6 +64,10 @@ public class AppServer extends BaseServer {
 		this.fileIO = (fileIO == null) ? new JavaFileIO() : fileIO;
 		System.err.println(Fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, appMagicWord));
 		System.err.println(Fmt("Constructed storagePath=%s", DEFAULT_PORT, storagePath));
+	}
+	
+	private String action() {
+		return "/" + appMagicWord;
 	}
 	
 	private static String param(Request req, String key) {
@@ -101,9 +115,9 @@ public class AppServer extends BaseServer {
 			} else if (verb.equals("Show")) {
 				z = doVerbShow(req.query);
 			} else if (verb.equals("Rendez")) {
-				z = doVerbRendez(req.query);
+				z = doVerbRendez(req.query).toString();
 			} else if (verb.equals("Rendez2")) {
-				z = doVerbRendez2(req.query);
+				z = doVerbRendez2(req.query).toString();
 			} else {
 				throw new Exception("bad Verb: " + verb);
 			}
@@ -149,7 +163,7 @@ public class AppServer extends BaseServer {
 
     /** doVerbRendez tells our peer code and requests peer code of future pal. */
 	private Ht doVerbRendez(HashMap<String,String> q) throws IOException {
-			int myNewCode = DH.randomInt(8999) + 1000;
+			String myNewCode = "" + DH.randomInt(899) + 100;  // Choose from 100..999
 //			return "<form method=GET action=\"/\" >"
 //			   		+   "Your code is " + myNewCode + "<P> Enter friend's code: <BR>"
 //					+   "<input type=text name=you><br>"
@@ -175,13 +189,124 @@ public class AppServer extends BaseServer {
 	}
 	
 	/** doVerbRendez2 does the DH Public Key Exchange. */
-	private String doVerbRendez2(HashMap<String,String> q) throws IOException {
-		String x = ReadUrl(Fmt("%s?f=Rendez&me=%s&you=%s&v=%s",
-				storagePath, q.get("me"), q.get("you"), myDH.publicKey()));
+	private Ht doVerbRendez2(HashMap<String,String> q) throws IOException {
+		String mine = Fmt("DH %s %s HD", persona.name, persona.dhpub);
+		String x = UseStore("Rendez", 
+				"me", q.get("me"), 
+				"you", q.get("you"), 
+				"v", myDH.publicKey().toString());
+		if (x==null || x.length()==0 || x.charAt(0)=='!') {
+			return new Ht("Peering failed.  Go back and try again.");
+		}
+		String[] w = x.split(x, ' ');
+		if (w.length < 4) {
+			Bad("Received peering value too short: [%d] %s", w.length, x);
+		}
+		if (!IsAlphaNum(w[0]) || !IsAlphaNum(w[1]) || !IsAlphaNum(w[2]) || !IsAlphaNum(w[3])) {
+			Bad("Received peering values not alphanum: %s", x);
+		}
+		if (!w[0].equals("DH") || !w[3].equals("HD")) {
+			Bad("Not magic numbers: %s, %s", w[0], w[3]);
+		}
+		String theirName = w[1];
+		String theirPub = w[2];
+		Friend f = findFriend(theirName);
+		if (f != null) {
+			// TODO: handle ambiguous names.
+			Bad("Already have a friend named %s", theirName);
+		}
+		DH theirDH = new DH(theirPub);
+		DH mutualDH = myDH.mutualKey(theirDH);
+		String check = new Hash(mutualDH.toString()).asShortString();
 		
+		Ht z = new Ht(Fmt("Confirm peering with name '%s'.", theirName));
+		Ht.tag(z, "p", null);
+		z.append(Fmt("For your security, make sure that you BOTH got checksum '%s'.", check));
+		Ht.tag(z, "p", null);
 		
+		Ht inputs = new Ht("");
+		Ht.tag(inputs, "input", strings("type", "hidden", "name", "name", "value", theirName));
+		Ht.tag(inputs, "input", strings("type", "hidden", "name", "pub", "value", theirPub));
+		Ht.tag(inputs, "input", strings("type", "hidden", "name", "verb", "value", "Rendez3"));
+		Ht.tag(inputs, "input", strings("type", "submit", "name", "name", "value", theirName));
 		
-		return new Ht("RENDEZ RESULT " + x).toString();
+		Ht.tag(z, "form", strings("method", "GET", "action", action()), inputs);
+		return z;
+	}
+
+	/** doVerbRendez3 actually saves the confirmed friend. */
+	private Ht doVerbRendez3(HashMap<String,String> q) throws IOException {
+		String theirName = q.get("name");
+		String theirPub = q.get("pub");
+		Friend f = findFriend(theirName);
+		if (f != null) {
+			// TODO: handle ambiguous names.
+			Bad("Already have a friend named %s", theirName);
+		}
+		f = new Friend();
+		f.name = theirName;
+		f.dhpub = theirPub;
+		f.alias = "";
+		f.hash = new Hash(theirPub).asShortString();
+		persona.friend.add(f);
+		savePersona();
+		
+		return new Ht(Fmt("Saved new friend: %s", theirName));
+	}
+	private void savePersona() {
+		Bytes b = new Bytes();
+		Proto.PicklePersona(persona, b);
+		try {
+			DataOutputStream dos = fileIO.openDataFileOutput(Fmt("dozen_%s.txt", persona.name));
+			dos.write(b.arr, b.off, b.len);
+			dos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+			Bad("Cannot save persona: %s", e);
+		}
+	}
+	private void loadPersona(String name) {
+		try {
+			DataInputStream dis = fileIO.openDataFileInput(Fmt("dozen_%s.txt", name));
+			int avail = dis.available();
+			byte[] b = new byte[avail];
+			dis.readFully(b);
+			dis.close();
+			persona = Proto.UnpicklePersona(new Bytes(b));
+		} catch (IOException e) {
+			e.printStackTrace();
+			Bad("Cannot load persona: %s", e);
+		}
+	}
+	private Friend findFriend(String sought) {
+		// TODO: disambiguate with alias or hash
+		for (Friend f : persona.friend) {
+			if (f.name.equals(sought)) {
+				return f;
+			}
+		}
+		return null;
+	}
+
+	private Room findRoom(String sought) {
+		String[] w = sought.split("@");
+		if (w.length == 2) {
+			return findRoom(w[0], w[1]);
+		} else {
+			return null;
+		}
+	}
+	private Room findRoom(String soughtRoom, String soughtFriend) {
+		Friend f = findFriend(soughtFriend);
+		if (f != null) {
+			// TODO: disambiguate with alias or hash
+			for (Room r : f.room) {
+				if (r.name.equals(soughtRoom)) {
+					return r;
+				}
+			}
+		}
+		return null;
 	}
 	
 	private String doVerbShow(HashMap<String,String> q) throws IOException {

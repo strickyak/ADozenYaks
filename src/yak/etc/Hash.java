@@ -41,6 +41,10 @@ public class Hash extends Yak {
 			throw Bad("yak.etc.Hash: %s", e);
 		}
 	}
+	
+	public String asShortString() {
+		return toString().substring(0, 8);
+	}
 
 	@Override
 	public String toString() {

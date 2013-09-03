@@ -9,6 +9,10 @@ import java.security.SecureRandom;
 public class DH extends Yak {
 	public BigInteger big;
 	
+	public DH(String hex) {
+		this(new BigInteger(hex, 16));
+	}
+	
 	public DH(BigInteger big) {
 		this.big = big;
 		DataInputStream urandom = null;

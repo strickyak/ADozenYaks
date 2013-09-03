@@ -5,7 +5,7 @@ define Room
 
 define Friend
   String name = 1
-  int hash = 2
+  String hash = 2
   String alias = 3
   String dhpub = 4
   repeated String hub = 5

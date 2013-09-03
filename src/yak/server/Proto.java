@@ -10,7 +10,7 @@ public class Proto extends Yak {
     String alias;
     String contact;
     String dhpub;
-    int hash;
+    String hash;
     ArrayList<String> hub = new ArrayList<String>();
     String name;
     String remark;
@@ -27,7 +27,7 @@ public class Proto extends Yak {
     String dhpub;
     String dhsec;
     ArrayList<Friend> friend = new ArrayList<Friend>();
-    int hash;
+    String hash;
     ArrayList<String> hub = new ArrayList<String>();
     String name;
     String remark;
@@ -40,7 +40,7 @@ public class Proto extends Yak {
   }
   public static void PickleFriend (Friend p, Bytes b) {
     if (p.name != null) b.appendProtoString (1, p.name);
-    b.appendProtoInt (2, p.hash);
+    if (p.hash != null) b.appendProtoString (2, p.hash);
     if (p.alias != null) b.appendProtoString (3, p.alias);
     if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
       for (int i = 0; i < p.hub.size(); i++) {
@@ -63,7 +63,7 @@ public class Proto extends Yak {
   }
   public static void PicklePersona (Persona p, Bytes b) {
     if (p.name != null) b.appendProtoString (1, p.name);
-    b.appendProtoInt (2, p.hash);
+    if (p.hash != null) b.appendProtoString (2, p.hash);
     if (p.alias != null) b.appendProtoString (3, p.alias);
     if (p.dhpub != null) b.appendProtoString (4, p.dhpub);
       for (int i = 0; i < p.hub.size(); i++) {
@@ -106,7 +106,7 @@ public static Friend UnpickleFriend (Bytes b) {
         break;
       case (4 << 3) | 2: { z.dhpub = b.popVarString(); }
         break;
-      case (2 << 3) | 0: { z.hash = b.popVarInt(); }
+      case (2 << 3) | 2: { z.hash = b.popVarString(); }
         break;
       case (5 << 3) | 2: { z.hub.add(b.popVarString()); }
         break;
@@ -164,7 +164,7 @@ public static Persona UnpicklePersona (Bytes b) {
          z.friend.add(p2);
       } // end case
         break;
-      case (2 << 3) | 0: { z.hash = b.popVarInt(); }
+      case (2 << 3) | 2: { z.hash = b.popVarString(); }
         break;
       case (5 << 3) | 2: { z.hub.add(b.popVarString()); }
         break;

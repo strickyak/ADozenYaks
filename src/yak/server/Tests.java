@@ -20,7 +20,7 @@ public class Tests extends Yak {
 	public void testFriend() {
 		Friend f = new Friend();
 		f.name = "Eric";
-		f.hash = 888;
+		f.hash = "123abc";
 		Room r1 = new Room();
 		r1.name = "Lobby";
 		r1.member.add("Alice");
@@ -41,7 +41,7 @@ public class Tests extends Yak {
 		
 		Friend g = Proto.UnpickleFriend(b);
 		assertEquals("Eric", g.name);
-		assertEquals(888, g.hash);
+		assertEquals("123abc", g.hash);
 		
 		assertEquals(2, g.room.size());
 		assertEquals("Lobby", g.room.get(0).name);

@@ -36,7 +36,7 @@ public class AppServer extends BaseServer {
 	private FileIO fileIO;
 	private Persona persona;
 	
-	private DH myDH = null;
+	private DH mySec = null;
 	
 	public static void main(String[] args) {
 		try {
@@ -99,15 +99,9 @@ public class AppServer extends BaseServer {
 		
 		String query = req.query.get("query");
 		if (query != null) {
-			req.ParseQueryPiecesToMap(query, req.query);
+			Request.ParseQueryPiecesToMap(query, req.query);
 		}
-		
-		String user = req.query.get("u");
-		String channel = req.query.get("c");
-		String tnode = req.query.get("t");
-		String latest = req.query.get("latest");
-		String value = req.query.get("v");
-		String z = "!";
+		String z = null;
 
 		try {
 			if (verb == null || verb.equals("") || verb.equals("Top")) {
@@ -118,8 +112,8 @@ public class AppServer extends BaseServer {
 				z = doVerbMakePersona(req.query).toString();
 			} else if (verb.equals("Boot")) {
 				z = doVerbBoot();
-			} else if (verb.equals("Chan")) {
-				z = doVerbChan(param(req, "c"));
+//			} else if (verb.equals("Chan")) {
+//				z = doVerbChan(param(req, "c"));
 			} else if (verb.equals("Show")) {
 				z = doVerbShow(req.query);
 			} else if (verb.equals("Rendez")) {
@@ -139,17 +133,6 @@ public class AppServer extends BaseServer {
 
 		return new Response(z, 200, "text/html");
 	}
-
-//	private String doUri(String uri) throws IOException {
-//		String a = uri.toString();
-//		if (a.startsWith("yak12:")) {
-//			a = a.substring(6);
-//		}
-//		System.err.println("+++ doUri: <" + a);
-//		String z = htmlEscape("URI IS " + CurlyEncode(a));
-//		System.err.println("+++ doUri: >" + z);
-//		return z;
-//	}
 
 	private String doVerbBoot() throws IOException {
 		return UseStore("Boot");
@@ -192,14 +175,12 @@ public class AppServer extends BaseServer {
 	private Ht doVerbMakePersona(HashMap<String, String> q) {
 		String name = q.get("name");
 		
-		myDH = DH.RandomKey();
-		
+		DH sec = DH.RandomKey();
 		persona = new Persona();
 		persona.name = name;
-		persona.dhsec = myDH.toString();
-		persona.dhpub = myDH.publicKey().toString();
+		persona.dhsec = sec.toString();
+		persona.dhpub = sec.publicKey().toString();
 		persona.hash = new Hash(persona.dhpub).asShortString();
-				
 		savePersona();
 		
 		Ht z = new Ht(Fmt("Saved Persona '%s'.", name));
@@ -210,37 +191,48 @@ public class AppServer extends BaseServer {
 	
 	private Ht doVerbPersona(HashMap<String, String> q) {
 		String name = q.get("name");
-		loadPersona(name);
-		
-		return new Ht(Fmt("Loaded Persona '%s'", name));
-	}
-
-	private String doVerbChan(String channel) throws IOException {
-		String[] tnodes = UseStore("list", "c", channel).split("\n");
-		String z = Fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
-		z += "<br><dl>\n";
-		for (String t : tnodes) {
-			if (!(IsAlphaNum(t))) {
-				throw Bad("listed tnode not alphanum: %s", Show(tnodes));
-			}
-			
-			z += "<dt><b>" + t + "</b><br>\n";
-			z += "<dd><pre>\n" + UseStore("fetch", "c", channel, "t", t) + "\n</pre>\n";
+		if (persona == null || persona.name != name) {
+			loadPersona(name);
 		}
-		z += "</dl><p> OK.";
+		
+		Ht choices = new Ht();
+		Ht.tag(choices, "li", null, makeAppLink("Add a friend (Peering Ceremony)", "Rendez"));
+		for (Room r : persona.room) {
+			Ht.tag(choices, "li", null, makeAppLink("Your room: " + r.name, "ShowRoom", "rname", r.name + "@" + name));
+		}
+		for (Friend f : persona.friend) {
+			Ht.tag(choices, "li", null, makeAppLink("Your friend: " + f.name, "ShowFriend", "fname", f.name));
+
+			for (Room r : f.room) {
+				Ht.tag(choices, "li", null, makeAppLink("Your friend's room: " + r.name + "@" + f.name, "ShowRoom", "rname", r.name + "@" + f.name));
+			}
+		}
+		Ht z = new Ht();
+		z.append("Using your persona: " + name);
+		Ht.tag(z, "ul", null, choices);
+		
 		return z;
 	}
 
+//	private String doVerbChan(String channel) throws IOException {
+//		String[] tnodes = UseStore("list", "c", channel).split("\n");
+//		String z = Fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
+//		z += "<br><dl>\n";
+//		for (String t : tnodes) {
+//			if (!(IsAlphaNum(t))) {
+//				throw Bad("listed tnode not alphanum: %s", Show(tnodes));
+//			}
+//			
+//			z += "<dt><b>" + t + "</b><br>\n";
+//			z += "<dd><pre>\n" + UseStore("fetch", "c", channel, "t", t) + "\n</pre>\n";
+//		}
+//		z += "</dl><p> OK.";
+//		return z;
+//	}
+
     /** doVerbRendez tells our peer code and requests peer code of future pal. */
 	private Ht doVerbRendez(HashMap<String,String> q) throws IOException {
-			String myNewCode = "" + DH.randomInt(899) + 100;  // Choose from 100..999
-//			return "<form method=GET action=\"/\" >"
-//			   		+   "Your code is " + myNewCode + "<P> Enter friend's code: <BR>"
-//					+   "<input type=text name=you><br>"
-//					+   "<input type=hidden name=me value=" + myNewCode + ">"
-//					+   "<input type=hidden name=verb value=Rendez2>"
-//					+   "<input type=submit>"
-//					+ "</form>";
+			String myNewCode = Integer.toString(DH.randomInt(899) + 100);  // Choose from 100..999
 			Ht text = new Ht("Your code is " + myNewCode + "<P> Enter friend's code: <BR>");
 			Ht body = new Ht();
 			body.append("Your code is " + myNewCode);
@@ -264,7 +256,7 @@ public class AppServer extends BaseServer {
 		String x = UseStore("Rendez", 
 				"me", q.get("me"), 
 				"you", q.get("you"), 
-				"v", myDH.publicKey().toString());
+				"v", mySec.publicKey().toString());
 		if (x==null || x.length()==0 || x.charAt(0)=='!') {
 			return new Ht("Peering failed.  Go back and try again.");
 		}
@@ -286,7 +278,7 @@ public class AppServer extends BaseServer {
 			Bad("Already have a friend named %s", theirName);
 		}
 		DH theirDH = new DH(theirPub);
-		DH mutualDH = myDH.mutualKey(theirDH);
+		DH mutualDH = mySec.mutualKey(theirDH);
 		String check = new Hash(mutualDH.toString()).asShortString();
 		
 		Ht z = new Ht(Fmt("Confirm peering with name '%s'.", theirName));
@@ -343,6 +335,7 @@ public class AppServer extends BaseServer {
 			dis.readFully(b);
 			dis.close();
 			persona = Proto.UnpicklePersona(new Bytes(b));
+			mySec = new DH(persona.dhsec);
 		} catch (IOException e) {
 			e.printStackTrace();
 			Bad("Cannot load persona: %s", e);

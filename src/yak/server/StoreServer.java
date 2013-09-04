@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -75,8 +76,6 @@ public class StoreServer extends BaseServer {
 				z = doVerbList(req);
 			} else if (verb.equals("Create")) {
 				z = doVerbCreate(req);
-			} else if (verb.equals("Boot")) {
-				z = doVerbBoot(req);
 			} else if (verb.equals("Rendez")) {
 				z = doVerbRendez(req);
 			} else {
@@ -101,6 +100,7 @@ public class StoreServer extends BaseServer {
 			throw new RuntimeException(String.format(
 					"Channel %s does not exist.", channel));
 		}
+		Arrays.sort(inodes);
 		String z = Join(inodes, "\n");
 		System.err.printf("LIST >> %s\n", z);
 		return z;
@@ -125,18 +125,6 @@ public class StoreServer extends BaseServer {
 		File tnodeFile = new File(chanDir, tnode);
 		WriteWholeTextFile(tnodeFile, value);
 		return "OK";
-	}
-	
-	public String doVerbBoot(Request req) throws IOException {
-		String z = "BOOTING: ";
-		
-		z += " # " + doVerbCreate(new Request("c=777&t=101&v=first"));
-		z += " # " + doVerbCreate(new Request("c=777&t=102&v=second"));
-		z += " # " + doVerbCreate(new Request("c=777&t=103&v=third"));
-		z += " # " + doVerbCreate(new Request("c=888&t=104&v=fourth"));
-		z += " # " + doVerbCreate(new Request("c=888&t=105&v=fifth"));
-		
-		return z + "\n\n... BOOTED.";
 	}
 	
 	public String doVerbRendez(Request req) throws IOException {

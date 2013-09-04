@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -129,10 +130,10 @@ public class AppServer extends BaseServer {
 				z = doVerbPersona(req.query);
 			} else if (verb.equals("MakePersona")) {
 				z = doVerbMakePersona(req.query);
-//			} else if (verb.equals("Boot")) {
-//				z = doVerbBoot();
 			} else if (verb.equals("ViewFriend")) {
 				z = doVerbViewFriend(req.query);
+			} else if (verb.equals("PostToFriend")) {
+				z = doVerbPostToFriend(req.query);
 			} else if (verb.equals("Rendez")) {
 				z = doVerbRendez(req.query);
 			} else if (verb.equals("Rendez2")) {
@@ -150,31 +151,31 @@ public class AppServer extends BaseServer {
 
 		return new Response(z.toString(), 200, "text/html");
 	}
-
-	private String doVerbBoot() throws IOException {
-		return UseStore("Boot");
-	}
 	
 	private Ht doTop() {
 		String[] files = fileIO.listFiles();
 		Pattern p = Pattern.compile("dozen_([a-z][a-z0-9]*)\\.pb");
-		ArrayList<String> personas = new ArrayList<String>();
+		ArrayList<String> personaList = new ArrayList<String>();
 		for (String f : files) {
 			Say("File: %s", f);
 			Matcher m = p.matcher(f);
 			if (m.matches()) {
 				Say("Matched: %s", m.group(1));
-				personas.add(m.group(1));
+				personaList.add(m.group(1));
 			}
 		}
+		// Convert to array personae, and sort.
+		String[] personae = new String[personaList.size()];
+		personaList.toArray(personae);
+		Arrays.sort(personae);
 		
 		Ht z = new Ht();
-		if (personas.isEmpty()) {
+		if (personae.length == 0) {
 			z.add("No personas have been created.");
 		} else {
 			z.add("Pick which persona to use:");
 			Ht choices = new Ht();
-			for (String name : personas) {
+			for (String name : personae) {
 				choices.addTag("li", null, makeAppLink(name, "Persona", "persona", name));
 			}
 			z.addTag("ul", null, choices);
@@ -209,6 +210,7 @@ public class AppServer extends BaseServer {
 	private Ht doVerbPersona(HashMap<String, String> q) {
 		Ht choices = new Ht();
 		choices.addTag("li", null, makeAppLink("Add a friend (Peering Ceremony)", "Rendez"));
+
 		for (Room r : persona.room) {
 			choices.addTag("li", null, makeAppLink("Your room: " + r.name, "ViewRoom", "rname", r.name + "@" + persona.name));
 		}
@@ -238,9 +240,9 @@ public class AppServer extends BaseServer {
 		return z;
 	}
 	
-	private void postMessageToFriendChannel(Friend f, String message) throws IOException {
+	private void postTextToFriendChannel(Friend f, String message) throws IOException {
 		Message msg = new Message();
-		msg.body = message;
+		msg.body = Fmt("(From %s) %s", persona.name, message);
 		Bytes b = new Bytes();
 		Proto.PickleMessage(msg, b);
 		
@@ -259,6 +261,25 @@ public class AppServer extends BaseServer {
 		}
 	}
 
+	private Ht doVerbPostToFriend(HashMap<String,String> q) throws IOException {
+		String fname = q.get("fname");
+		String data = q.get("data");
+
+		Must(fname != null, "doVerbViewFriend: Missing fname param");
+		Must(IsDecent(fname), "doVerbViewFriend: Bad fname param: %s", fname);
+		
+		Friend f = findFriend(fname);
+		Must(f != null, "doVerbViewFriend: Cannot find friend %s", fname);
+		
+		postTextToFriendChannel(f, data);
+		
+		Ht page = new Ht();
+		page.add("Posted message.");
+		page.addTag("p", null);
+		page.add(makeAppLink("Top", "Top"));
+		return page;
+	}
+	
 	private Ht doVerbViewFriend(HashMap<String,String> q) throws IOException {
 		String fname = q.get("fname");
 		Must(fname != null, "doVerbViewFriend: Missing fname param");
@@ -280,11 +301,12 @@ public class AppServer extends BaseServer {
 		formGuts.addTag("input", strings("type", "hidden", "name", "fname", "value", fname));
 		formGuts.addTag("input", strings("type", "hidden", "name", "verb", "value", "PostToFriend"));
 		
-		page.addTag("form", strings("method", "POST", "action", action()));
+		page.addTag("form", strings("method", "POST", "action", action()), formGuts);
 		return page;
 	}
 	private Ht listChannel(String title, String channel, Hash chanKey) throws IOException {
 		String[] tnodes = UseStore("List", "c", channel).split("\n");
+		Arrays.sort(tnodes);
 
 		Say("listChannel: title=%s, id=%s, tnodes= %s", title, channel, Show(tnodes));
 
@@ -301,8 +323,11 @@ public class AppServer extends BaseServer {
 			Bytes plain = chanKey.decryptBytes(b);
 			Say("Plain=%s", HexEncode(plain));
 			Message msg = Proto.UnpickleMessage(plain);
+			
+			long millis = Long.parseLong(t);
+			Date date = new Date(millis);
 
-			items.addTag("li", null, msg.body);
+			items.addTag("li", null, Fmt("%s = %s: %s", t, date, msg.body));
 		}
 		
 		Ht page = new Ht();
@@ -393,9 +418,14 @@ public class AppServer extends BaseServer {
 		f.hash = new Hash(theirPub).asShortString();
 		persona.friend.add(f);
 		savePersona();
-		postMessageToFriendChannel(f, "Friend Channel Created.");
+		postTextToFriendChannel(f,
+				Fmt("Friend Channel Created (by '%s' with '%s').", persona.name, f.name));
 		
-		return new Ht(Fmt("Saved new friend: %s", theirName));
+		Ht page = new Ht();
+		page.add("Saved new friend: %s", theirName);
+		page.addTag("p", null);
+		page.add(makeAppLink("Top", "Top"));
+		return page;
 	}
 	private void savePersona() {
 		Bytes b = new Bytes();
@@ -472,8 +502,17 @@ public class AppServer extends BaseServer {
 
 	public Ht makeAppLink(String text, String verb, String ...kvkv) {
 		if (persona != null) {
+			boolean setPersona = true;
 			MustNotBeNull(persona.name);
-			kvkv = PushBack(kvkv, "persona", persona.name);
+			// Make sure we're not overriding another 'persona' key.
+			for (int i = 0; i < kvkv.length; i += 2) {
+				if (kvkv[i].equals("persona")) {
+					setPersona = false;
+				}
+			}
+			if (setPersona) {
+				kvkv = PushBack(kvkv, "persona", persona.name);
+			}
 		}
 		String url = makeUrl(action(), PushBack(kvkv, "verb", verb));
 		Say("makeAppLink: %s", url);

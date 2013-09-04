@@ -227,11 +227,15 @@ public class AppServer extends BaseServer {
 	}
 	
 	private String friendChannelId(Friend f) {
-		return new Hash(f.dhmut, "FriendChannelId").asMediumString();
+		String z = new Hash(f.dhmut, "FriendChannelId").asMediumString();
+		Say("friendChannelId: me=%s friend=%s chanId=%s", persona.name, f.name, z);
+		return z;
 	}
 	
 	private Hash friendChannelKey(Friend f) {
-		return new Hash(f.dhmut, "FriendChannelKey");
+		Hash z = new Hash(f.dhmut, "FriendChannelKey");
+		Say("friendChannelKey: me=%s friend=%s chanKey=%s", persona.name, f.name, z);
+		return z;
 	}
 	
 	private void postMessageToFriendChannel(Friend f, String message) throws IOException {
@@ -244,6 +248,8 @@ public class AppServer extends BaseServer {
 		Hash chanKey = friendChannelKey(f);
 		
 		Bytes encrypted = chanKey.encryptBytes(b);
+		Say("Plain message = %s", HexEncode(b));
+		Say("Encrypted message = %s", HexEncode(encrypted));
 		
 		Date now = new Date();
 		String tnode = "" + now.getTime();
@@ -289,9 +295,12 @@ public class AppServer extends BaseServer {
 			}
 			
 			String raw = UseStore("Fetch", "c", channel, "t", t);
+			Say("raw=%s", CurlyEncode(raw));
 			Bytes b = HexDecodeIgnoringJunk(raw);
+			Say("Encrypted=%s", HexEncode(b));
 			Bytes plain = chanKey.decryptBytes(b);
-			Message msg = Proto.UnpickleMessage(b);
+			Say("Plain=%s", HexEncode(plain));
+			Message msg = Proto.UnpickleMessage(plain);
 
 			items.addTag("li", null, msg.body);
 		}
@@ -457,6 +466,7 @@ public class AppServer extends BaseServer {
 		for (int i = 0; i < kvkv.length; i+=2) {
 			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
 		}
+		Say("UseStore: %s", url);
 		return FetchUrlText(url);
 	}
 
@@ -466,6 +476,7 @@ public class AppServer extends BaseServer {
 			kvkv = PushBack(kvkv, "persona", persona.name);
 		}
 		String url = makeUrl(action(), PushBack(kvkv, "verb", verb));
+		Say("makeAppLink: %s", url);
 		return Ht.tag(null, "a", strings("href", url), text);
 	}
 }

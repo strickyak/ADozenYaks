@@ -241,7 +241,7 @@ public class Json extends Yak {
 	public static void main(String[] a) {
 		String filename = a[0];
 		try {
-			String s = ReadWholeFile(new File(filename));
+			String s = ReadWholeTextFile(new File(filename));
 			Parser parser = new Parser(s);
 			while (parser.token != 'e') {
 				Say("Token %d %c Float %f Str %s", (int) parser.token,

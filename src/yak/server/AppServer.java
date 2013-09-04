@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,6 +26,7 @@ import yak.etc.BaseServer.Response;
 import yak.etc.Yak.Ht;
 import yak.etc.Yak;
 import yak.server.Proto.Friend;
+import yak.server.Proto.Message;
 import yak.server.Proto.Persona;
 import yak.server.Proto.Room;
 
@@ -40,10 +42,20 @@ public class AppServer extends BaseServer {
 	
 	public static void main(String[] args) {
 		try {
-			if (args.length != 1) {
-				throw Bad("AppServer needs one arg, the magic word: ", Show(args));
+			String magic = "magic";
+			int port = DEFAULT_PORT;
+			for (int i = 0; i < args.length; i += 2) {
+				if (args[i].equals("-p")) {
+					port = Integer.parseInt(args[i+1]);
+				} else if (args[i].equals("-m")) {
+					magic = args[i+1];
+				} else {
+					Bad("Unknown arg: %s", args[i]);
+				}
 			}
-			String magic = args[0];
+			if (port < 1024) {
+				Bad("Port under 1024: %d", port);
+			}
 			if (!(IsAlphaNum(magic))) {
 				throw Bad("magicWord must be alphaNum.");
 			}
@@ -51,7 +63,7 @@ public class AppServer extends BaseServer {
 			// new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magic)).start();
 			
 			new AppServer(
-					DEFAULT_PORT, magic,
+					port, magic,
 					Fmt("http://localhost:%d/%s", StoreServer.DEFAULT_PORT, magic),
 					null).run();
 		} catch (Exception e) {
@@ -65,8 +77,8 @@ public class AppServer extends BaseServer {
 		this.appMagicWord = appMagicWord;
 		this.storagePath = storagePath;
 		this.fileIO = (fileIO == null) ? new JavaFileIO() : fileIO;
-		System.err.println(Fmt("Hello, this is AppServer on %d with %s", DEFAULT_PORT, appMagicWord));
-		System.err.println(Fmt("Constructed storagePath=%s", DEFAULT_PORT, storagePath));
+		System.err.println(Fmt("Hello, this is AppServer on port=%d with magic=%s", DEFAULT_PORT, appMagicWord));
+		System.err.println(Fmt("Constructed storagePath=%s", storagePath));
 	}
 	
 	private String action() {
@@ -101,27 +113,32 @@ public class AppServer extends BaseServer {
 		if (query != null) {
 			Request.ParseQueryPiecesToMap(query, req.query);
 		}
-		String z = null;
 
+		String desiredPersonaName = req.query.get("persona");
+		if (desiredPersonaName != null && !desiredPersonaName.equals("")) {
+			if (persona == null || persona.name != desiredPersonaName) {
+				loadPersona(desiredPersonaName);
+			}
+		}
+
+		Ht z = null;
 		try {
 			if (verb == null || verb.equals("") || verb.equals("Top")) {
-				z = doTop().toString();
+				z = doTop();
 			} else if (verb.equals("Persona")) {
-				z = doVerbPersona(req.query).toString();
+				z = doVerbPersona(req.query);
 			} else if (verb.equals("MakePersona")) {
-				z = doVerbMakePersona(req.query).toString();
-			} else if (verb.equals("Boot")) {
-				z = doVerbBoot();
-//			} else if (verb.equals("Chan")) {
-//				z = doVerbChan(param(req, "c"));
-			} else if (verb.equals("Show")) {
-				z = doVerbShow(req.query);
+				z = doVerbMakePersona(req.query);
+//			} else if (verb.equals("Boot")) {
+//				z = doVerbBoot();
+			} else if (verb.equals("ViewFriend")) {
+				z = doVerbViewFriend(req.query);
 			} else if (verb.equals("Rendez")) {
-				z = doVerbRendez(req.query).toString();
+				z = doVerbRendez(req.query);
 			} else if (verb.equals("Rendez2")) {
-				z = doVerbRendez2(req.query).toString();
+				z = doVerbRendez2(req.query);
 			} else if (verb.equals("Rendez3")) {
-				z = doVerbRendez3(req.query).toString();
+				z = doVerbRendez3(req.query);
 			} else {
 				throw new Exception("bad Verb: " + verb);
 			}
@@ -131,7 +148,7 @@ public class AppServer extends BaseServer {
 					"text/plain");
 		}
 
-		return new Response(z, 200, "text/html");
+		return new Response(z.toString(), 200, "text/html");
 	}
 
 	private String doVerbBoot() throws IOException {
@@ -153,21 +170,21 @@ public class AppServer extends BaseServer {
 		
 		Ht z = new Ht();
 		if (personas.isEmpty()) {
-			z.append("No personas have been created.");
+			z.add("No personas have been created.");
 		} else {
-			z.append("Pick which persona to use:");
+			z.add("Pick which persona to use:");
 			Ht choices = new Ht();
 			for (String name : personas) {
-				Ht.tag(choices, "li", null, makeAppLink(name, "Persona", "name", name));
+				choices.addTag("li", null, makeAppLink(name, "Persona", "persona", name));
 			}
-			Ht.tag(z, "ul", null, choices);
+			z.addTag("ul", null, choices);
 		}
-		Ht.tag(z, "hr", null);
+		z.addTag("hr", null);
 		
-		z.append("Make a new persona named:");
-		Ht.tag(z, "input", strings("type", "text", "name", "name"));
-		Ht.tag(z, "input", strings("type", "hidden", "name", "verb", "value", "MakePersona"));
-		Ht.tag(z, "input", strings("type", "submit"));
+		z.add("Make a new persona named:");
+		z.addTag("input", strings("type", "text", "name", "name"));
+		z.addTag("input", strings("type", "hidden", "name", "verb", "value", "MakePersona"));
+		z.addTag("input", strings("type", "submit"));
 		
 		return Ht.tag(null, "form", strings("method", "GET", "action", action()), z);
 	}
@@ -184,60 +201,116 @@ public class AppServer extends BaseServer {
 		savePersona();
 		
 		Ht z = new Ht(Fmt("Saved Persona '%s'.", name));
-		Ht.tag(z, "p", null);
-		z.append(makeAppLink("TOP", "Top"));
+		z.addTag("p", null);
+		z.add(makeAppLink("TOP", "Top"));
 		return z;
 	}
 	
 	private Ht doVerbPersona(HashMap<String, String> q) {
-		String name = q.get("name");
-		if (persona == null || persona.name != name) {
-			loadPersona(name);
-		}
-		
 		Ht choices = new Ht();
-		Ht.tag(choices, "li", null, makeAppLink("Add a friend (Peering Ceremony)", "Rendez"));
+		choices.addTag("li", null, makeAppLink("Add a friend (Peering Ceremony)", "Rendez"));
 		for (Room r : persona.room) {
-			Ht.tag(choices, "li", null, makeAppLink("Your room: " + r.name, "ShowRoom", "rname", r.name + "@" + name));
+			choices.addTag("li", null, makeAppLink("Your room: " + r.name, "ViewRoom", "rname", r.name + "@" + persona.name));
 		}
 		for (Friend f : persona.friend) {
-			Ht.tag(choices, "li", null, makeAppLink("Your friend: " + f.name, "ShowFriend", "fname", f.name));
+			choices.addTag("li", null, makeAppLink("Your friend: " + f.name, "ViewFriend", "fname", f.name));
 
 			for (Room r : f.room) {
-				Ht.tag(choices, "li", null, makeAppLink("Your friend's room: " + r.name + "@" + f.name, "ShowRoom", "rname", r.name + "@" + f.name));
+				choices.addTag("li", null, makeAppLink("Your friend's room: " + r.name + "@" + f.name, "ShowRoom", "rname", r.name + "@" + f.name));
 			}
 		}
 		Ht z = new Ht();
-		z.append("Using your persona: " + name);
-		Ht.tag(z, "ul", null, choices);
+		z.add("Using your persona: " + persona.name);
+		z.addTag("ul", null, choices);
 		
 		return z;
 	}
+	
+	private String friendChannelId(Friend f) {
+		return new Hash(f.dhmut, "FriendChannelId").asMediumString();
+	}
+	
+	private Hash friendChannelKey(Friend f) {
+		return new Hash(f.dhmut, "FriendChannelKey");
+	}
+	
+	private void postMessageToFriendChannel(Friend f, String message) throws IOException {
+		Message msg = new Message();
+		msg.body = message;
+		Bytes b = new Bytes();
+		Proto.PickleMessage(msg, b);
+		
+		String chanId = friendChannelId(f);
+		Hash chanKey = friendChannelKey(f);
+		
+		Bytes encrypted = chanKey.encryptBytes(b);
+		
+		Date now = new Date();
+		String tnode = "" + now.getTime();
+		String raw = UseStore("Create", "c", chanId, "t", tnode, "v", HexEncode(encrypted));
+		if (raw != null && raw.length() > 0 && raw.charAt(0) == '!') {
+			throw Bad("postMessageToFriendChannel ERROR: %s", raw);
+		}
+	}
 
-//	private String doVerbChan(String channel) throws IOException {
-//		String[] tnodes = UseStore("list", "c", channel).split("\n");
-//		String z = Fmt("doVerbChan: c=%s; tnodes=%s", channel, Show(tnodes));
-//		z += "<br><dl>\n";
-//		for (String t : tnodes) {
-//			if (!(IsAlphaNum(t))) {
-//				throw Bad("listed tnode not alphanum: %s", Show(tnodes));
-//			}
-//			
-//			z += "<dt><b>" + t + "</b><br>\n";
-//			z += "<dd><pre>\n" + UseStore("fetch", "c", channel, "t", t) + "\n</pre>\n";
-//		}
-//		z += "</dl><p> OK.";
-//		return z;
-//	}
+	private Ht doVerbViewFriend(HashMap<String,String> q) throws IOException {
+		String fname = q.get("fname");
+		Must(fname != null, "doVerbViewFriend: Missing fname param");
+		Must(IsDecent(fname), "doVerbViewFriend: Bad fname param: %s", fname);
+		
+		Friend f = findFriend(fname);
+		Must(f != null, "doVerbViewFriend: Cannot find friend %s", fname);
+		
+		String chanId = friendChannelId(f);
+		Hash chanKey = friendChannelKey(f);
+		
+		Ht page = listChannel(Fmt("Friend '%s'", fname), chanId, chanKey);
+		page.addTag("hr", null);
+		
+		Ht formGuts = new Ht();
+		formGuts.addTag("textarea", strings("name", "data"));
+		formGuts.addTag("br", null);
+		formGuts.addTag("input", strings("type", "submit"));
+		formGuts.addTag("input", strings("type", "hidden", "name", "fname", "value", fname));
+		formGuts.addTag("input", strings("type", "hidden", "name", "verb", "value", "PostToFriend"));
+		
+		page.addTag("form", strings("method", "POST", "action", action()));
+		return page;
+	}
+	private Ht listChannel(String title, String channel, Hash chanKey) throws IOException {
+		String[] tnodes = UseStore("List", "c", channel).split("\n");
+
+		Say("listChannel: title=%s, id=%s, tnodes= %s", title, channel, Show(tnodes));
+
+		Ht items = new Ht();
+		for (String t : tnodes) {
+			if (!(IsAlphaNum(t))) {
+				throw Bad("listed tnode not alphanum: %s", Show(tnodes));
+			}
+			
+			String raw = UseStore("Fetch", "c", channel, "t", t);
+			Bytes b = HexDecodeIgnoringJunk(raw);
+			Bytes plain = chanKey.decryptBytes(b);
+			Message msg = Proto.UnpickleMessage(b);
+
+			items.addTag("li", null, msg.body);
+		}
+		
+		Ht page = new Ht();
+		page.add(Fmt("Channel: %s", title));
+		page.addTag("p", null);
+		page.addTag("ul", null, items);
+		return page;
+	}
 
     /** doVerbRendez tells our peer code and requests peer code of future pal. */
 	private Ht doVerbRendez(HashMap<String,String> q) throws IOException {
 			String myNewCode = Integer.toString(DH.randomInt(899) + 100);  // Choose from 100..999
 			Ht text = new Ht("Your code is " + myNewCode + "<P> Enter friend's code: <BR>");
 			Ht body = new Ht();
-			body.append("Your code is " + myNewCode);
+			body.add("Your code is " + myNewCode);
 			Ht.tag(body, "p", null);
-			body.append("Enter new friend's code:");
+			body.add("Enter new friend's code:");
 			Ht.tag(body, "br", null);
 			Ht.tag(body, "input", strings("type", "text", "name", "you"));
 			Ht.tag(body, "br", null);
@@ -247,52 +320,51 @@ public class AppServer extends BaseServer {
 			Ht.tag(body, "input", strings("type", "submit"));
 			return Ht.tag(null, "form", strings(
 					"method", "GET",
-					"action", "/" + appMagicWord), body);
+					"action", action()), body);
 	}
 	
 	/** doVerbRendez2 does the DH Public Key Exchange. */
 	private Ht doVerbRendez2(HashMap<String,String> q) throws IOException {
-		String mine = Fmt("DH %s %s HD", persona.name, persona.dhpub);
-		String x = UseStore("Rendez", 
-				"me", q.get("me"), 
-				"you", q.get("you"), 
-				"v", mySec.publicKey().toString());
+		String mine = Fmt("DH_%s_%s_HD", persona.name, persona.dhpub);
+		
+		String x = UseStore("Rendez", "me", q.get("me"), "you", q.get("you"), "v", mine);
+		
 		if (x==null || x.length()==0 || x.charAt(0)=='!') {
 			return new Ht("Peering failed.  Go back and try again.");
 		}
-		String[] w = x.split(x, ' ');
+		String[] w = x.split("_");
 		if (w.length < 4) {
-			Bad("Received peering value too short: [%d] %s", w.length, x);
+			throw Bad("Received peering value too short: [%d] %s", w.length, UrlEncode(x));
 		}
 		if (!IsAlphaNum(w[0]) || !IsAlphaNum(w[1]) || !IsAlphaNum(w[2]) || !IsAlphaNum(w[3])) {
-			Bad("Received peering values not alphanum: %s", x);
+			throw Bad("Received peering values not alphanum: %s", x);
 		}
 		if (!w[0].equals("DH") || !w[3].equals("HD")) {
-			Bad("Not magic numbers: %s, %s", w[0], w[3]);
+			throw Bad("Not magic numbers: %s, %s", w[0], w[3]);
 		}
 		String theirName = w[1];
 		String theirPub = w[2];
 		Friend f = findFriend(theirName);
 		if (f != null) {
 			// TODO: handle ambiguous names.
-			Bad("Already have a friend named %s", theirName);
+			throw Bad("Already have a friend named %s", theirName);
 		}
 		DH theirDH = new DH(theirPub);
 		DH mutualDH = mySec.mutualKey(theirDH);
 		String check = new Hash(mutualDH.toString()).asShortString();
 		
 		Ht z = new Ht(Fmt("Confirm peering with name '%s'.", theirName));
-		Ht.tag(z, "p", null);
-		z.append(Fmt("For your security, make sure that you BOTH got checksum '%s'.", check));
-		Ht.tag(z, "p", null);
+		z.addTag("p", null);
+		z.add(Fmt("For your security, make sure that you BOTH got checksum '%s'.", check));
+		z.addTag("p", null);
 		
 		Ht inputs = new Ht("");
-		Ht.tag(inputs, "input", strings("type", "hidden", "name", "name", "value", theirName));
-		Ht.tag(inputs, "input", strings("type", "hidden", "name", "pub", "value", theirPub));
+		inputs.addTag("input", strings("type", "hidden", "name", "name", "value", theirName));
+		inputs.addTag("input", strings("type", "hidden", "name", "pub", "value", theirPub));
 		Ht.tag(inputs, "input", strings("type", "hidden", "name", "verb", "value", "Rendez3"));
-		Ht.tag(inputs, "input", strings("type", "submit", "name", "name", "value", theirName));
+		Ht.tag(inputs, "input", strings("type", "submit", "name", "submit", "value", "Confirm"));
 		
-		Ht.tag(z, "form", strings("method", "GET", "action", action()), inputs);
+		z.addTag("form", strings("method", "GET", "action", action()), inputs);
 		return z;
 	}
 
@@ -312,6 +384,7 @@ public class AppServer extends BaseServer {
 		f.hash = new Hash(theirPub).asShortString();
 		persona.friend.add(f);
 		savePersona();
+		postMessageToFriendChannel(f, "Friend Channel Created.");
 		
 		return new Ht(Fmt("Saved new friend: %s", theirName));
 	}
@@ -356,7 +429,7 @@ public class AppServer extends BaseServer {
 		if (w.length == 2) {
 			return findRoom(w[0], w[1]);
 		} else {
-			return null;
+			throw Bad("Bad room name: %s", sought);
 		}
 	}
 	private Room findRoom(String soughtRoom, String soughtFriend) {
@@ -372,34 +445,27 @@ public class AppServer extends BaseServer {
 		return null;
 	}
 	
-	private String doVerbShow(HashMap<String,String> q) throws IOException {
-		return new Ht(q.toString()).toString();
-	}
-	
 	public void setStoragePath(String storagePath) {
 		this.storagePath = storagePath;
 	}
 	
 	public String UseStore(String verb, String ...kvkv) throws IOException {
-		if (!storagePath.startsWith("htp://")) {
-			Bad("Bad StoragePath in AppServer: %s", UrlEncode(storagePath));
+		if (!storagePath.startsWith("http://")) {
+			Bad("Bad StoragePath in AppServer: %s", CurlyEncode(storagePath));
 		}
 		String url = Fmt("%s?f=%s", storagePath, verb);
 		for (int i = 0; i < kvkv.length; i+=2) {
 			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
 		}
-		return ReadUrl(url);
+		return FetchUrlText(url);
 	}
 
 	public Ht makeAppLink(String text, String verb, String ...kvkv) {
-		String url = Fmt("/%s?verb=%s", appMagicWord, verb);
-		Say("makeAppLink: start: {%s}", url);
-		for (int i = 0; i < kvkv.length; i+=2) {
-			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
-			Say("makeAppLink: added: {%s} {%s} -> {%s}", kvkv[i], kvkv[i+1], url);
+		if (persona != null) {
+			MustNotBeNull(persona.name);
+			kvkv = PushBack(kvkv, "persona", persona.name);
 		}
-		Ht z = Ht.tag(null, "a", strings("href", url), text);
-		Say("makeAppLink: z: {%s}", z);
-		return z;
+		String url = makeUrl(action(), PushBack(kvkv, "verb", verb));
+		return Ht.tag(null, "a", strings("href", url), text);
 	}
 }

@@ -58,6 +58,19 @@ public abstract class Yak {
 		throw new IllegalArgumentException();
 	}
 
+	public static int ValueOfHexCharIgnoringJunk(char c) {
+		if ('0' <= c && c <= '9') {
+			return c - '0';
+		}
+		if ('a' <= c && c <= 'f') {
+			return c - 'a' + 10;
+		}
+		if ('A' <= c && c <= 'F') {
+			return c - 'A' + 10;
+		}
+		return -1;
+	}
+
 	/** Bytes of String, allowing only 8-bit (Latin1) chars */
 	public static byte[] StringToBytes(String a) {
 		final int n = a.length();
@@ -157,15 +170,44 @@ public abstract class Yak {
 	public static char[] HexChars = { '0', '1', '2', '3', '4', '5', '6', '7',
 			'8', '9', 'a', 'b', 'c', 'd', 'e', 'f', };
 
-	public static String HexEncode(byte[] bytes) {
-		final int n = bytes.length;
+	public static String HexEncode(byte[] array) {
+		final int n = array.length;
 		char[] chars = new char[2 * n];
 		for (int i = 0; i < n; i++) {
-			final byte b = bytes[i];
+			final byte b = array[i];
 			chars[2 * i] = HexChars[(b >> 4) & 15];
 			chars[2 * i + 1] = HexChars[b & 15];
 		}
 		return CharsToString(chars);
+	}
+	public static String HexEncode(Bytes bytes) {
+		final int n = bytes.len;
+		char[] chars = new char[2 * n];
+		for (int i = 0; i < n; i++) {
+			final byte b = bytes.arr[bytes.off + i];
+			chars[2 * i] = HexChars[(b >> 4) & 15];
+			chars[2 * i + 1] = HexChars[b & 15];
+		}
+		return CharsToString(chars);
+	}
+
+	public static Bytes HexDecodeIgnoringJunk(String a) {
+		final int alen = a.length();
+		Bytes z = new Bytes();
+		boolean complete = true;
+		int x = 0;
+		for (int i = 0; i < alen; i++) {
+			int p = ValueOfHexCharIgnoringJunk(a.charAt(i));
+			if (p < 0) continue;
+			if (complete) {
+				x = p << 4;
+				complete = false;
+			} else {
+				z.appendByte((byte)(x | p));
+				complete = true;
+			}
+		}
+		return z;
 	}
 
 	public static byte[] HexDecode(String a) {
@@ -180,6 +222,9 @@ public abstract class Yak {
 	}
 
 	public static String Show(HashMap map) {
+		if (map == null) {
+			return "{map IS_NULL}";
+		}
 		StringBuffer sb = new StringBuffer();
 		sb.append("{map ");
 		for (Object k : map.keySet()) {
@@ -191,6 +236,9 @@ public abstract class Yak {
 	}
 
 	public static String Show(String[] ss) {
+		if (ss == null) {
+			return "{arr IS_NULL}";
+		}
 		StringBuffer sb = new StringBuffer();
 		sb.append("{arr ");
 		for (int i = 0; i < ss.length; i++) {
@@ -220,17 +268,31 @@ public abstract class Yak {
 		}
 		return sb.toString();
 	}
-
-	public static String Hash(String s) {
-		char x = 0;
-		final int n = s.length();
-		for (int i = 0; i < n; i++) {
-			x += s.charAt(i);
+	
+	/** Append tails to array, returning new array */
+	public static String[] PushBack(String[] array, String...tails) {
+		Must(array != null);
+		Must(tails != null);
+		for (int i = 0; i < array.length; i++) {
+			Must(array[i] != null);
+			Say("array[%d] = %s", i, array[i]);
 		}
-		return Integer.toString((int) x);
+		for (int i = 0; i < tails.length; i++) {
+			Must(tails[i] != null);
+			Say("tails[%d] = %s", i, tails[i]);
+		}
+		String[] z = new String[array.length + tails.length];
+		System.arraycopy(array, 0, z, 0, array.length);
+		System.arraycopy(tails, 0, z, array.length, tails.length);
+
+		for (int i = 0; i < z.length; i++) {
+			Must(z[i] != null);
+			Say("z[%d] = %s", i, z[i]);
+		}
+		return z;
 	}
 
-	public static String ReadWholeFile(File f) throws IOException {
+	public static String ReadWholeTextFile(File f) throws IOException {
 		BufferedReader r = new BufferedReader(new InputStreamReader(
 				new FileInputStream(f)));
 		StringBuffer sb = new StringBuffer();
@@ -244,14 +306,14 @@ public abstract class Yak {
 		return sb.toString();
 	}
 
-	public static void WriteWholeFile(File f, String value) throws IOException {
+	public static void WriteWholeTextFile(File f, String value) throws IOException {
 		BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
 				new FileOutputStream(f)));
 		w.write(value);
 		w.close();
 	}
 
-	public static String ReadAll(InputStream in) throws IOException {
+	public static String ReadAllText(InputStream in) throws IOException {
 		// TODO Auto-generated method stub
 		StringBuffer sb = new StringBuffer();
 		while (true) {
@@ -264,17 +326,17 @@ public abstract class Yak {
 		return sb.toString();
 	}
 
-	public static String ReadUrl(String url) throws IOException {
-		return ReadUrl(new URL(url));
+	public static String FetchUrlText(String url) throws IOException {
+		return FetchUrlText(new URL(url));
 	}
 
-	public static String ReadUrl(URL url) throws IOException {
+	public static String FetchUrlText(URL url) throws IOException {
 		URLConnection conn = url.openConnection();
 		conn.connect();
 		InputStream in = (InputStream) conn.getContent();
 		Say("RESULT=" + in);
 
-		String s = ReadAll(in);
+		String s = ReadAllText(in);
 		return s;
 	}
 
@@ -314,8 +376,18 @@ public abstract class Yak {
 		return sb.toString();
 	}
 
-	public static String Fmt(String s, Object... objects) {
-		return String.format(s, objects);
+
+	public String makeUrl(String path, String ...kvkv) {
+		String url = path + "?";
+		for (int i = 0; i < kvkv.length; i+=2) {
+			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
+		}
+		return url;
+	}
+
+	/** Fmt calls String.format only if it has nonempty argument list */
+	public static String Fmt(String fmt, Object... objects) {
+		return objects.length > 0 ? String.format(fmt, objects) : fmt;
 	}
 
 	/** matches what is valid in Html TAG */
@@ -333,35 +405,30 @@ public abstract class Yak {
 			this.sb = new StringBuffer(that.sb.toString());
 		}
 
-		public Ht(String s) {
-			this.sb = new StringBuffer(htmlEscape(s));
+		public Ht(String fmt, Object...args) {
+			this.sb = new StringBuffer(htmlEscape(Fmt(fmt, args)));
 		}
 
 		public String toString() {
 			return sb.toString();
 		}
 
-		public Ht append(String s) {
-			sb.append(htmlEscape(s));
+		public Ht add(String fmt, Object...args) {
+			sb.append(htmlEscape(Fmt(fmt, args)));
 			return this;
 		}
 
-		public Ht append(Ht that) {
+		public Ht add(Ht that) {
 			sb.append(that.toString());
 			return this;
 		}
 
 		static public Ht entity(String name) {
+			Must(IsAlphaNum(name), "Bad entity: %s", name);
 			Ht ht = new Ht();
 			ht.sb.append(Fmt("&%s;", name));
 			return ht;
 		}
-
-		static public Ht tag(Ht appendMe, String type, String[] args,
-				String body) {
-			return tag(appendMe, type, args, new Ht(body));
-		}
-
 		static public Ht tag(Ht appendMe, String type, String[] args, Ht body) {
 			Ht z = appendMe == null ? new Ht() : appendMe;
 			assert htmlTagP.matcher(type).matches();
@@ -379,21 +446,25 @@ public abstract class Yak {
 			return z;
 		}
 
+		static public Ht tag(Ht appendMe, String type, String[] args,
+				String body) {
+			return tag(appendMe, type, args, new Ht(body));
+		}
+
 		static public Ht tag(Ht appendMe, String type, String[] args) {
-			Ht z = appendMe == null ? new Ht() : appendMe;
-			assert htmlTagP.matcher(type).matches();
-			Say("HT TAG TYPE: %s", type);
-			z.sb.append(Fmt("<%s ", type));
-			if (args != null) {
-				for (int i = 0; i < args.length; i += 2) {
-					assert htmlTagP.matcher(args[i]).matches();
-					Say("HT TAG PARAM: %s -> {%s}", args[i], args[i+1]);
-					z.sb.append(Fmt("%s=\"%s\" ", args[i],
-							htmlEscape(args[i + 1])));
-				}
-			}
-			z.sb.append(" /\n>");
-			return z;
+			return tag(appendMe, type, args, "");
+		}
+		
+		public Ht addTag(String type, String[] args, Ht body) {
+			return tag(this, type, args, body);
+		}
+		
+		public Ht addTag(String type, String[] args, String body) {
+			return tag(this, type, args, body);
+		}
+		
+		public Ht addTag(String type, String[] args) {
+			return tag(this, type, args);
 		}
 	}
 
@@ -419,6 +490,29 @@ public abstract class Yak {
 		}
 		return true;
 	}
+
+	public static boolean IsDecent(String s) {
+		if (s == null) {
+			return false;
+		}
+		final int n = s.length();
+		if (n == 0) {
+			return false;  // Empty string NOT OK.
+		}
+		for (int i = 0; i < n; i++) {
+			char c = s.charAt(i);
+			if ('0' <= c && c <= '9')
+				continue;
+			if ('a' <= c && c <= 'z')
+				continue;
+			if ('A' <= c && c <= 'Z')
+				continue;
+			if (c == '_' || c == '.' || c == '/')
+				continue;
+			return false;
+		}
+		return true;
+	}
 	
 	public String[] Tail(String[] a) {
 		final int n = a.length;
@@ -433,7 +527,7 @@ public abstract class Yak {
 	}
 
 	public static RuntimeException Bad(String msg, Object... args) {
-		return new RuntimeException("BAD { " + Fmt(msg, args) + " }");
+		throw new RuntimeException("BAD: " + Fmt(msg, args));
 	}
 
 	public static void Say(String msg, Object... args) {
@@ -456,6 +550,11 @@ public abstract class Yak {
 	public static void Must(boolean cond, Object x) {
 		if (!(cond)) {
 			throw Bad("Must Failed: (%s)", x);
+		}
+	}
+	public static void MustNotBeNull(Object obj) {
+		if (obj == null) {
+			throw Bad("Must Failed: null.");
 		}
 	}
 

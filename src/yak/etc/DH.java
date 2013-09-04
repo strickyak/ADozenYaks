@@ -7,10 +7,11 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 
 public class DH extends Yak {
+	public static final int RADIX = 36;
 	public BigInteger big;
 	
 	public DH(String hex) {
-		this(new BigInteger(hex, 16));
+		this(new BigInteger(hex, 36));
 	}
 	
 	public DH(BigInteger big) {
@@ -30,17 +31,8 @@ public class DH extends Yak {
 	static SecureRandom Rand = new SecureRandom();
 
 	public static final int NumRandomBitsPerDHKey = 2047;
-//	public static final String Rfc3526Modulus1536Bits = ""
-//			+ "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
-//			+ "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
-//			+ "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
-//			+ "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
-//			+ "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"
-//			+ "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
-//			+ "83655D23DCA3AD961C62F356208552BB9ED529077096966D"
-//			+ "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF";
 	
-	public static final String Rfc3526Modulus2048Bits  = ""
+	public static final String Rfc3526Modulus2048BitsAsHex  = ""
 			+ "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
             + "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
             + "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
@@ -54,21 +46,21 @@ public class DH extends Yak {
             + "15728E5A8AACAA68FFFFFFFFFFFFFFFF";
 
 	/** Generator */
-	public static BigInteger G = new BigInteger("2");
+	public static BigInteger Generator = new BigInteger("2");
 	/** Modulus */
-	public static BigInteger M = new BigInteger(
-			DH.Rfc3526Modulus2048Bits, 16);
+	public static BigInteger Modulus = new BigInteger(
+			DH.Rfc3526Modulus2048BitsAsHex, 16);
 
 	public static DH RandomKey() {
 		return new DH(new BigInteger(NumRandomBitsPerDHKey, Rand));
 	}
 
 	public DH mutualKey(DH pubB) {
-		return new DH(pubB.big.modPow(this.big, M));
+		return new DH(pubB.big.modPow(this.big, Modulus));
 	}
 
 	public DH publicKey() {
-		return new DH(G.modPow(this.big, M));
+		return new DH(Generator.modPow(this.big, Modulus));
 	}
 
 	public static int randomInt(int max) {
@@ -77,6 +69,6 @@ public class DH extends Yak {
 	
 	@Override
 	public String toString() {
-		return big.toString(16);
+		return big.toString(36);
 	}
 }

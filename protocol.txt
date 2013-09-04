@@ -12,6 +12,7 @@ define Friend
   String contact = 6
   String remark = 7
   repeated Room room = 8
+  String dhmut = 11
 
 define Persona extends Friend
   String dhsec = 9

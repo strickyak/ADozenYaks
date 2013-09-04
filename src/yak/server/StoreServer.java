@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -22,14 +23,29 @@ public class StoreServer extends BaseServer {
 
 	public static void main(String[] args) throws IOException {
 		System.err.println("Hello, StoreServer! ");
-		if (args.length != 1) {
-			throw Bad("StoreServer needs one arg, the magic word: ", Show(args));
+		
+
+		String magic = "magic";
+		int port = DEFAULT_PORT;
+		for (int i = 0; i < args.length; i += 2) {
+			if (args[i].equals("-p")) {
+				port = Integer.parseInt(args[i+1]);
+			} else if (args[i].equals("-m")) {
+				magic = args[i+1];
+			} else {
+				Bad("Unknown arg: %s", args[i]);
+			}
 		}
-		String magicWord = args[0];
-		if (!(IsAlphaNum(magicWord))) {
+		if (port < 1024) {
+			Bad("Port under 1024: %d", port);
+		}
+		if (!(IsAlphaNum(magic))) {
 			throw Bad("magicWord must be alphaNum.");
 		}
-		new StoreServer(DEFAULT_PORT, magicWord).run();
+		if (!(IsAlphaNum(magic))) {
+			throw Bad("magicWord must be alphaNum.");
+		}
+		new StoreServer(port, magic).run();
 	}
 
 	public StoreServer(int port, String magicWord) {
@@ -49,7 +65,7 @@ public class StoreServer extends BaseServer {
 			throw Bad("Bad Magic Word: (%s) %s", magicWord, Show(req.path));
 		}
 
-		String verb = req.mustGetAlphaNumQuery("f");
+		String verb = req.mustGetDecentQuery("f");
 		String z = "MU";
 		
 		try {
@@ -76,7 +92,7 @@ public class StoreServer extends BaseServer {
 	}
 
 	public String doVerbList(Request req) {
-		String channel = req.mustGetAlphaNumQuery("c");
+		String channel = req.mustGetDecentQuery("c");
 		// TODO: latest;
 		System.err.printf("LIST << channel: %s, latest: %s \n", channel, "TODO");
 		File chanDir = new File(String.format("data/%s/", channel));
@@ -91,23 +107,23 @@ public class StoreServer extends BaseServer {
 	}
 
 	public String doVerbFetch(Request req) throws IOException {
-		String channel = req.mustGetAlphaNumQuery("c");
-		String tnode = req.mustGetAlphaNumQuery("t");
+		String channel = req.mustGetDecentQuery("c");
+		String tnode = req.mustGetDecentQuery("t");
 		
 		File chanDir = new File(new File("data"), channel);
 		File tnodeFile = new File(chanDir, tnode);
-		return ReadWholeFile(tnodeFile);
+		return ReadWholeTextFile(tnodeFile);
 	}
 
 	public String doVerbCreate(Request req) throws IOException {
-		String channel = req.mustGetAlphaNumQuery("c");
-		String tnode = req.mustGetAlphaNumQuery("t");
-		String value = req.mustGetAlphaNumQuery("v");
+		String channel = req.mustGetDecentQuery("c");
+		String tnode = req.mustGetDecentQuery("t");
+		String value = req.mustGetDecentQuery("v");
 
 		File chanDir = new File(new File("data"), channel);
 		chanDir.mkdirs();
 		File tnodeFile = new File(chanDir, tnode);
-		WriteWholeFile(tnodeFile, value);
+		WriteWholeTextFile(tnodeFile, value);
 		return "OK";
 	}
 	
@@ -124,9 +140,9 @@ public class StoreServer extends BaseServer {
 	}
 	
 	public String doVerbRendez(Request req) throws IOException {
-		String me = req.mustGetAlphaNumQuery("me");
-		String you = req.mustGetAlphaNumQuery("you");
-		String value = req.mustGetAlphaNumQuery("v");
+		String me = req.mustGetDecentQuery("me");
+		String you = req.mustGetDecentQuery("you");
+		String value = req.mustGetDecentQuery("v");
 		Rendez.Card theirs = rendez.waitForPeer(me, you, value);
 		if (theirs == null) {
 			return "!";  // Indicate failure.
@@ -191,13 +207,16 @@ public class StoreServer extends BaseServer {
 		private synchronized void collectGarbage() {
 			long now = new Date().getTime();
 			Say("GC at %d", now);
-			// HashMap<String, Card> peers2 = (HashMap<String, Card>) peers.clone();  // HACK
+			ArrayList<String> garbage = new ArrayList<String>(); 
 			for (String key : peers.keySet()) {
 				Card card = peers.get(key);
 				Say("... CARD timeout=%d me=%s you=%s v=%s", card.timeout - now, card.me, card.you, card.value);
 				if (card.timeout < now) {
-					peers.remove(key);
+					garbage.add(key);
 				}
+			}
+			for (String key : garbage) {
+				peers.remove(key);
 			}
 		}
 	}

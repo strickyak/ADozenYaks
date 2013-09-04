@@ -16,8 +16,8 @@ public class Hash extends Yak {
 	private String str;   // Lazily make Hex String if needed.
 	SecretKeySpec keySpec;    // Lazily make AES KeySpec if needed.
 
-	public Hash(String a) {
-		this(StringToBytes(a));
+	public Hash(String...strs) {
+		this(StringToBytes(Join(strs, "\n")));
 	}
 
 	public Hash(byte[] a) {
@@ -44,6 +44,10 @@ public class Hash extends Yak {
 	
 	public String asShortString() {
 		return toString().substring(0, 8);
+	}
+	
+	public String asMediumString() {
+		return toString().substring(0, 20);
 	}
 
 	@Override

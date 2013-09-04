@@ -9,6 +9,7 @@ public class Proto extends Yak {
   public static class Friend {
     String alias;
     String contact;
+    String dhmut;
     String dhpub;
     String hash;
     ArrayList<String> hub = new ArrayList<String>();
@@ -24,6 +25,7 @@ public class Proto extends Yak {
   public static class Persona extends Friend {
     String alias;
     String contact;
+    String dhmut;
     String dhpub;
     String dhsec;
     ArrayList<Friend> friend = new ArrayList<Friend>();
@@ -55,6 +57,7 @@ public class Proto extends Yak {
 	  b.appendProtoBytes (8, b2);
     }
       } // next i
+    if (p.dhmut != null) b.appendProtoString (11, p.dhmut);
   }
   public static void PickleMessage (Message p, Bytes b) {
     b.appendProtoInt (1, p.direction);
@@ -86,6 +89,7 @@ public class Proto extends Yak {
 	  b.appendProtoBytes (10, b2);
     }
       } // next i
+    if (p.dhmut != null) b.appendProtoString (11, p.dhmut);
   }
   public static void PickleRoom (Room p, Bytes b) {
     if (p.name != null) b.appendProtoString (1, p.name);
@@ -103,6 +107,8 @@ public static Friend UnpickleFriend (Bytes b) {
       case (3 << 3) | 2: { z.alias = b.popVarString(); }
         break;
       case (6 << 3) | 2: { z.contact = b.popVarString(); }
+        break;
+      case (11 << 3) | 2: { z.dhmut = b.popVarString(); }
         break;
       case (4 << 3) | 2: { z.dhpub = b.popVarString(); }
         break;
@@ -153,6 +159,8 @@ public static Persona UnpicklePersona (Bytes b) {
       case (3 << 3) | 2: { z.alias = b.popVarString(); }
         break;
       case (6 << 3) | 2: { z.contact = b.popVarString(); }
+        break;
+      case (11 << 3) | 2: { z.dhmut = b.popVarString(); }
         break;
       case (4 << 3) | 2: { z.dhpub = b.popVarString(); }
         break;

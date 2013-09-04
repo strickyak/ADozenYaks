@@ -71,13 +71,14 @@ public class Yak12Activity extends Activity {
 
 	static AppServer server;
 	static Thread serverThread;
-	static String appMagic = new Hash(DH.RandomKey().toString()).toString();
+	
+	// A magic string that other apps on the device will not guess.
+	static String appMagic = new Hash(DH.RandomKey().toString()).asMediumString();
 
 	AppCaller appCaller = new AppCaller(Yak.Fmt("http://localhost:%d/%s?",
 			AppServer.DEFAULT_PORT, appMagic));;
 	Context yakContext = this;
 	Handler yakHandler = new Handler();
-	FileIO fileIO;
 	
 	public Yak12Activity() {
 		Log.i("yak12", "###### CTOR: " + this);
@@ -87,168 +88,33 @@ public class Yak12Activity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		Log.i("yak12", "###### onCreate: " + this);
 		super.onCreate(savedInstanceState);
-		fileIO = new AndroidFileIO();
 
 		// Start embedded App Server, if it is not yet started.
 		if (serverThread == null) {
-			server = new AppServer(AppServer.DEFAULT_PORT, appMagic, "TEMPORARY", fileIO);
+			server = new AppServer(AppServer.DEFAULT_PORT, appMagic, "http://yak.net:30332/TODO", null);
 			serverThread = new Thread(server);
 			serverThread.start();
-			Yak.sleepSecs(0.1);
-			
-			initializeStoragePath();
+			Yak.sleepSecs(0.2);
 		}
 
 		Intent intent = getIntent();
 		Uri uri = intent.getData();
-		Bundle extras = intent.getExtras();
-		String path = uri == null ? "/" : uri.getPath();
 		String query = uri == null ? "" : uri.getQuery();
 		query = (query == null) ? "" : query;
 
 		try {
-			Log.i("antti", "..PATH=" + path);
-			Log.i("antti", "...QUERY=" + query);
-			String[] words = path.split("/");
-			String command = "";
-			if (words.length > 1) {
-				command = words[1];
-			}
-			HashMap<String, String> queryMap = new HashMap<String, String>();
-			if (query.contains("verb=")) {
-				handleNewVerb(query);
-			} else if (command.equals("dhdemo")) {
-				handleDHDemo();
-			} else if (command.equals("Channel777")) {
-				handleChannel777();
-			} else if (command.equals("Config")) {
-				handleConfig();
-			} else if (command.equals("URandom")) {
-				handleURandom();
-			} else if (command.equals("")) {
-				handleDefault();
-			} else {
-				Yak.Bad("BAD LAUNCH URI: " + uri);
-			}
+			
+			handle(query);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
-			toast(e.toString());
 			displayText("handleYak12Intent CAUGHT EXCEPTION:\n\n"
 					+ e.toString());
 		}
 	}
 
-	public void initializeStoragePath() {
-		String storagePath = "";
-		try {
-			storagePath = fileIO.readTextFile("config.txt");
-		} catch (RuntimeException e) {
-			e.printStackTrace();
-		}
-		server.setStoragePath(storagePath);
-		
-	}
-
-	public void toast(String message) {
-		Log.i("toast", message);
-		Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-	}
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.yak12, menu);
-		return true;
-	}
-
-	// /////////////////////////////////////////////////
-
-	private void handleChannel777() throws ClientProtocolException, IOException {
-		appCaller.handleChannel777();
-	}
-	private void handleURandom() throws ClientProtocolException, IOException {
-		String s = "";
-		try {
-			DataInputStream br = fileIO.openURandom();
-			for (int i = 0; i < 32; i++) {
-				s += " " + br.readLong();
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			s = ex.toString();
-		}
-		displayText("URandom: " + s);
-	}
-
-	private void handleOther(Uri uri) throws ClientProtocolException, IOException {
-		appCaller.handleOther(uri);
-	}
-
-	private void handleNewVerb(String query) throws ClientProtocolException, IOException {
-		appCaller.handleNewVerb(query);
-	}
-
-	private void handleDefault() {
-		displayList(new String[] { "Config", "*Rendez", "One", "Two", "Three", "Channel",
-				"Rendezvous", "dhdemo", "Channel777", "Channel0", "URandom" });
-	}
-
-	private void handleConfig() {
-		String text = "";
-		try {
-			text = fileIO.readTextFile("config.txt");
-		} catch (Exception e) {
-			toast(e.toString());
-		}
-		if (text.equals("")) {
-			text = "http://";
-		}
-		AnEditView editor = new AnEditView(text) {
-			@Override
-			public void onSave(String newText) {
-				fileIO.writeTextFile("config.txt", newText, false);
-				server.setStoragePath(newText);
-				toast("Saved Config");
-				startIntent("/", null);
-			}
-		};
-		setContentView(editor);
-	}
-	
-	class AndroidFileIO extends Yak.FileIO {
-
-		@Override
-		public BufferedReader openTextFileInput(String filename) throws FileNotFoundException {
-			FileInputStream fis = Yak12Activity.this.openFileInput(filename);
-			InputStreamReader isr = new InputStreamReader(fis);
-			return new BufferedReader(isr);
-		}
-
-		@Override
-		public PrintWriter openTextFileOutput(String filename, boolean worldly) throws IOException {
-			FileOutputStream fos = Yak12Activity.this.openFileOutput(filename,
-					worldly ? (Context.MODE_WORLD_READABLE | Context.MODE_WORLD_WRITEABLE) : Context.MODE_PRIVATE);
-			return new PrintWriter(new PrintStream(fos));
-		}
-
-		@Override
-		public DataInputStream openDataFileInput(String filename) throws FileNotFoundException {
-			FileInputStream fis = Yak12Activity.this.openFileInput(filename);
-			return new DataInputStream(fis);
-		}
-
-		@Override
-		public DataOutputStream openDataFileOutput(String filename) throws FileNotFoundException {
-			FileOutputStream fos = Yak12Activity.this.openFileOutput(filename, Context.MODE_PRIVATE);
-			return new DataOutputStream(fos);
-		}
-	}
-
-	// //////////////////////////////////////////////////
-
-	private void displayList(String[] labels) {
-		AListView v = new AListView(labels);
-		setContentView(v);
+	private void handle(String query) throws ClientProtocolException, IOException {
+		appCaller.handle(query);
 	}
 
 	private void displayText(String s) {
@@ -256,47 +122,8 @@ public class Yak12Activity extends Activity {
 	}
 
 	private void displayWeb(final String html) {
-		Log.i("displayWeb", "Running TEXT-WEB POST");
+		Log.i("displayWeb", "displayWeb");
 		WebView v = new AWebView(html);
-		// ATextView v = new ATextView(html);
-		setContentView(v);
-	}
-
-	public void handleDHDemo() { // DH DEMO
-		DH secA = DH.RandomKey();
-		DH secB = DH.RandomKey();
-		// Each raises g to the secret key to get the public key.
-		DH pubA = secA.publicKey();
-		DH pubB = secB.publicKey();
-		// A learns pubB; B learns pubA.
-		DH mutualA = secA.mutualKey(pubB); // A can compute.
-		DH mutualB = secB.mutualKey(pubA); // B can compute.
-		// Those mutual keys should be equal.
-		BigInteger mutualDiff = mutualA.big.subtract(mutualB.big);
-
-		Hash key = new Hash("mumble");
-		String plain = "I wish I were an Oscar Mayer Wiener\000.";
-		String encr = key.oldEncrypt(plain, 31415);
-		String recover = key.oldDecrypt(encr, 31415);
-
-		String html = "<html><body><ul>";
-		html += "<li> secA = " + secA;
-		html += "<li> secB = " + secB;
-		html += "<li> pubA = " + pubA;
-		html += "<li> pubB = " + pubB;
-		html += "<li> mutualA = " + mutualA;
-		html += "<li> mutualB = " + mutualB;
-		html += "<li> mutualDiff = " + mutualDiff;
-		html += "<li> len(mutual) = " + mutualA.toString().length()
-				+ " hex digits";
-
-		html += "<li> plain = " + plain.length() + ": "
-				+ Yak.CurlyEncode(plain);
-		html += "<li> encr = " + encr.length() + ": " + encr;
-		html += "<li> recover = " + recover.length() + ": "
-				+ Yak.CurlyEncode(recover);
-
-		AWebView v = new AWebView(html);
 		setContentView(v);
 	}
 
@@ -309,7 +136,7 @@ public class Yak12Activity extends Activity {
 			this.baseUrl = baseUrl;
 		}
 		
-		public void handleNewVerb(String query) throws ClientProtocolException,
+		public void handle(String query) throws ClientProtocolException,
 				IOException {
 			getUrlAndDisplay(baseUrl + "&" + query);
 		}
@@ -387,49 +214,6 @@ public class Yak12Activity extends Activity {
 		}
 	}
 
-	public class AListView extends ListView {
-
-		String[] labels;
-
-		public AListView(final String[] labels) {
-			super(yakContext);
-			this.labels = labels;
-			Log.i("AListView", "=== CTOR");
-
-			this.setAdapter(new ArrayAdapter<String>(yakContext,
-					R.layout.list_item, labels));
-
-			this.setLayoutParams(FILL);
-			this.setTextFilterEnabled(true);
-
-			this.setOnItemClickListener(new ClickListener());
-		}
-
-		private class ClickListener implements OnItemClickListener {
-
-			@Override
-			public void onItemClick(AdapterView<?> arg0, View arg1, int index,
-					long arg3) {
-				final String label = labels[index];
-				
-				if (label.length() > 0 && label.charAt(0) == '*') {
-					startStarVerb(label.substring(1));
-				} else if (label == "Channel") {
-					startChannel("555");
-				} else if (label == "dhdemo") {
-					startDHDemo();
-//				} else if (label == "Channel777") {
-//					startChannel777();
-//				} else if (label == "Channel0") {
-//					startChannel0();
-//				} else if (label == "Rendezvous") {
-//					startRendezvous();
-				} else {
-					startIntent("/" + label, "xyz=789");
-				}
-			}
-		}
-	}
 
 	public class AWebView extends WebView {
 
@@ -474,12 +258,9 @@ public class Yak12Activity extends Activity {
 		}
 
 		protected boolean onClickLink(String url) {
-			URI uri = URI.create("" + url);
-			String path = uri.getPath();
+			URI uri = URI.create(url);
 			String query = uri.getQuery();
-
-			startIntent(path, query);
-
+			startIntent(query);
 			return true;
 		}
 	}
@@ -493,33 +274,6 @@ public class Yak12Activity extends Activity {
 			this.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
 			this.setTextColor(Color.YELLOW);
 		}
-	}
-
-	public abstract class AnEditView extends LinearLayout {
-		public AnEditView(String text) {
-			super(yakContext);
-			Log.i("AnEditView", yakContext.toString() + "===  CTOR: " + Yak.CurlyEncode(text));
-			
-			final EditText editor = new EditText(yakContext);
-			editor.setText(text);
-			editor.setBackgroundColor(Color.BLACK);
-			editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-			editor.setTextColor(Color.GREEN);
-			
-			final Button btn = new Button(yakContext);
-			btn.setText("Save");
-			btn.setOnClickListener(new OnClickListener() {
-				public void onClick(View v) {
-					onSave(editor.getText().toString());
-				}
-			});
-
-			this.setOrientation(LinearLayout.VERTICAL);
-			this.addView(btn);
-			this.addView(editor);
-		}
-			
-		public abstract void onSave(String text);
 	}
 
 	public class AVerticalView extends LinearLayout {
@@ -536,92 +290,52 @@ public class Yak12Activity extends Activity {
 		}
 	}
 
-	// Activity Starters
-
-	void startList(String[] labels) {
-		String z = "";
-		for (String s : labels) {
-			z = z + labels + ";";
-		}
-		startIntent("/list", null, "items", z);
-	}
-
-	void startStarVerb(String verb) {
-		startIntent("/", "verb=" + verb);
-	}
-
-	void startChannel(String chanKey) {
-		startIntent("/channel/" + chanKey, null);
-	}
-
-//	void startRendezvous() {
-//		startIntent("/Rendez", null);
-//	}
-
-	void startDHDemo() {
-		startIntent("/dhdemo", null);
-	}
-
-//	void startChannel777() {
-//		startIntent("/Channel777", null);
-//	}
-//
-//	void startChannel0() {
-//		startIntent("/Channel0", null);
-//	}
-
-	void startIntent(String actPath, String actQuery, String... extrasKV) {
-		Uri uri = new Uri.Builder().scheme("yak12").path(actPath)
+	void startIntent(String actQuery) {
+		Uri uri = new Uri.Builder().scheme("yak12").path("/")
 				.encodedQuery(actQuery).build();
 		Intent intent = new Intent("android.intent.action.MAIN", uri);
 		intent.setClass(getApplicationContext(), Yak12Activity.class);
-		for (int i = 0; i < extrasKV.length; i += 2) {
-			intent.putExtra((String) extrasKV[i], extrasKV[i + 1]);
-		}
 
 		startActivity(intent);
 	}
 
-	// ////////////////////////////////////
-	// Other Activity Events.
-
-	protected void onStart() {
+	// Activity Event Hooks
+	
+	@Override protected void onStart() {
 		Log.i("yak12", "###### onStart" + this);
 		super.onStart();
 	}
 
-	protected void onRestart() {
+	@Override protected void onRestart() {
 		Log.i("yak12", "###### onRestart " + this);
 		super.onRestart();
 	}
 
-	protected void onResume() {
+	@Override protected void onResume() {
 		Log.i("yak12", "###### onResume " + this);
 		super.onResume();
 	}
 
-	protected void onPause() {
+	@Override protected void onPause() {
 		Log.i("yak12", "###### onPause " + this);
 		super.onPause();
 	}
 
-	protected void onStop() {
+	@Override protected void onStop() {
 		Log.i("yak12", "###### onStop " + this);
 		super.onStop();
 	}
 
-	protected void onDestroy() {
+	@Override protected void onDestroy() {
 		Log.i("yak12", "###### onDestroy " + this);
 		super.onDestroy();
 	}
 
-	@Override
-	public void setContentView(View view) {
+	@Override public void setContentView(View view) {
 		Log.i("yak12", "@@@@@@@ setContentView:" + view + " " + this);
 		super.setContentView(view);
 	}
 
-	// //////////////////////////////
 	// Constants.
 
 	LayoutParams FILL = new LayoutParams(LayoutParams.FILL_PARENT,

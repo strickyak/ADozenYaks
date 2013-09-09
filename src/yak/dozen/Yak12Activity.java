@@ -91,7 +91,11 @@ public class Yak12Activity extends Activity {
 
 		// Start embedded App Server, if it is not yet started.
 		if (serverThread == null) {
-			server = new AppServer(AppServer.DEFAULT_PORT, appMagic, "http://yak.net:30332/TODO", null);
+			server = new EmbedAppServer(
+					AppServer.DEFAULT_PORT,
+					appMagic,
+					"http://yak.net:30332/YakButter",
+					new AndroidFileIO());
 			serverThread = new Thread(server);
 			serverThread.start();
 			Yak.sleepSecs(0.2);
@@ -222,7 +226,8 @@ public class Yak12Activity extends Activity {
 			super(yakContext);
 			Log.i("AWebView", "=== CTOR");
 
-			this.loadDataWithBaseURL("terse://terse", html, "text/html",
+			this.loadDataWithBaseURL(
+					"http://localhost:" + AppServer.DEFAULT_PORT + "/", html, "text/html",
 					"UTF-8", null);
 
 			// this.setWebChromeClient(new WebChromeClient());
@@ -271,7 +276,7 @@ public class Yak12Activity extends Activity {
 			Log.i("ATextView", yakContext.toString() + "===  CTOR: " + Yak.CurlyEncode(text));
 			this.setText(text);
 			this.setBackgroundColor(Color.BLACK);
-			this.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+			this.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
 			this.setTextColor(Color.YELLOW);
 		}
 	}
@@ -334,6 +339,52 @@ public class Yak12Activity extends Activity {
 	@Override public void setContentView(View view) {
 		Log.i("yak12", "@@@@@@@ setContentView:" + view + " " + this);
 		super.setContentView(view);
+	}
+	
+	static class EmbedAppServer extends AppServer {
+
+		public EmbedAppServer(int port, String appMagicWord,
+				String storagePath, FileIO fileIO) {
+			super(port, appMagicWord, storagePath, fileIO);
+			
+		}
+		
+	}
+	
+	class AndroidFileIO extends FileIO {
+
+		public String[] listFiles() {
+			return Yak12Activity.this.fileList();
+		}
+		
+		@Override
+		public BufferedReader openTextFileInput(String filename)
+				throws FileNotFoundException {
+			FileInputStream x = openFileInput(filename);
+			return new BufferedReader(new InputStreamReader(x));
+		}
+
+		@Override
+		public PrintWriter openTextFileOutput(String filename, boolean worldly)
+				throws IOException {
+			Yak.Must(!worldly);  // Don't ever be public.
+			FileOutputStream x = openFileOutput(filename, MODE_PRIVATE);
+			return new PrintWriter(x);
+		}
+
+		@Override
+		public DataInputStream openDataFileInput(String filename)
+				throws FileNotFoundException {
+			FileInputStream x = openFileInput(filename);
+			return new DataInputStream(x);
+		}
+
+		@Override
+		public DataOutputStream openDataFileOutput(String filename)
+				throws FileNotFoundException {
+			FileOutputStream x = openFileOutput(filename, MODE_PRIVATE);
+			return new DataOutputStream(x);
+		}
 	}
 
 	// Constants.

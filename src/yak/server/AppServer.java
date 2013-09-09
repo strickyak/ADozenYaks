@@ -229,6 +229,7 @@ public class AppServer extends BaseServer {
 	}
 	
 	private String mutual(Friend f) {
+		Must(f.dhpub != null, "Null dhpub for friend: %s", f.name);
 		Must(f.dhpub.length() > 0, "Empty dhpub for friend: %s", f.name);
 		if (f.dhmut == null || f.dhmut.length() == 0) {
 			f.dhmut = mySec.mutualKey(new DH(f.dhpub)).toString();

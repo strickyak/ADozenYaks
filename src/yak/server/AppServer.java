@@ -228,14 +228,22 @@ public class AppServer extends BaseServer {
 		return z;
 	}
 	
+	private String mutual(Friend f) {
+		Must(f.dhpub.length() > 0, "Empty dhpub for friend: %s", f.name);
+		if (f.dhmut == null || f.dhmut.length() == 0) {
+			f.dhmut = mySec.mutualKey(new DH(f.dhpub)).toString();
+		}
+		return f.dhmut;
+	}
+	
 	private String friendChannelId(Friend f) {
-		String z = new Hash(f.dhmut, "FriendChannelId").asMediumString();
+		String z = new Hash(mutual(f), "FriendChannelId").asMediumString();
 		Say("friendChannelId: me=%s friend=%s chanId=%s", persona.name, f.name, z);
 		return z;
 	}
 	
 	private Hash friendChannelKey(Friend f) {
-		Hash z = new Hash(f.dhmut, "FriendChannelKey");
+		Hash z = new Hash(mutual(f), "FriendChannelKey");
 		Say("friendChannelKey: me=%s friend=%s chanKey=%s", persona.name, f.name, z);
 		return z;
 	}
@@ -414,6 +422,7 @@ public class AppServer extends BaseServer {
 		f = new Friend();
 		f.name = theirName;
 		f.dhpub = theirPub;
+		f.dhmut = mutual(f);
 		f.alias = "";
 		f.hash = new Hash(theirPub).asShortString();
 		persona.friend.add(f);

@@ -66,20 +66,20 @@ public class AppServer extends BaseServer {
 			new AppServer(
 					port, magic,
 					Fmt("http://localhost:%d/%s", StoreServer.DEFAULT_PORT, magic),
-					null).run();
+					null, null).run();
 		} catch (Exception e) {
 			System.err.println("CAUGHT: " + e);
 			e.printStackTrace();
 		}
 	}
 
-	public AppServer(int port, String appMagicWord, String storagePath, FileIO fileIO) {
-		super(port);
+	public AppServer(int port, String appMagicWord, String storagePath, FileIO fileIO, Logger logger) {
+		super(port, logger);
 		this.appMagicWord = appMagicWord;
 		this.storagePath = storagePath;
 		this.fileIO = (fileIO == null) ? new JavaFileIO() : fileIO;
-		System.err.println(Fmt("Hello, this is AppServer on port=%d with magic=%s", DEFAULT_PORT, appMagicWord));
-		System.err.println(Fmt("Constructed storagePath=%s", storagePath));
+		log.log(2, "Hello, this is AppServer on port=%d with magic=%s", DEFAULT_PORT, appMagicWord);
+		log.log(2, "Constructed storagePath=%s", storagePath);
 	}
 	
 	private String action() {
@@ -98,8 +98,8 @@ public class AppServer extends BaseServer {
 	}
 
 	public Response handleRequest(Request req) {
-		Say("Req %s", req);
-		Say("AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
+		log.log(2, "Req %s", req);
+		log.log(2, "AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
 		
 		if (req.path[0].equals("favicon.ico")) {
 			return new Response("No favicon.ico here.", 404, "text/plain");
@@ -153,14 +153,15 @@ public class AppServer extends BaseServer {
 	}
 	
 	private Ht doTop() {
+		log.log(1, "LISTING FILES");
 		String[] files = fileIO.listFiles();
 		Pattern p = Pattern.compile("dozen_([a-z][a-z0-9]*)\\.pb");
 		ArrayList<String> personaList = new ArrayList<String>();
 		for (String f : files) {
-			Say("File: %s", f);
+			log.log(2, "File: %s", f);
 			Matcher m = p.matcher(f);
 			if (m.matches()) {
-				Say("Matched: %s", m.group(1));
+				log.log(2, "Matched: %s", m.group(1));
 				personaList.add(m.group(1));
 			}
 		}
@@ -239,13 +240,13 @@ public class AppServer extends BaseServer {
 	
 	private String friendChannelId(Friend f) {
 		String z = new Hash(mutual(f), "FriendChannelId").asMediumString();
-		Say("friendChannelId: me=%s friend=%s chanId=%s", persona.name, f.name, z);
+		log.log(2, "friendChannelId: me=%s friend=%s chanId=%s", persona.name, f.name, z);
 		return z;
 	}
 	
 	private Hash friendChannelKey(Friend f) {
 		Hash z = new Hash(mutual(f), "FriendChannelKey");
-		Say("friendChannelKey: me=%s friend=%s chanKey=%s", persona.name, f.name, z);
+		log.log(2, "friendChannelKey: me=%s friend=%s chanKey=%s", persona.name, f.name, z);
 		return z;
 	}
 	
@@ -259,8 +260,8 @@ public class AppServer extends BaseServer {
 		Hash chanKey = friendChannelKey(f);
 		
 		Bytes encrypted = chanKey.encryptBytes(b);
-		Say("Plain message = %s", HexEncode(b));
-		Say("Encrypted message = %s", HexEncode(encrypted));
+		log.log(2, "Plain message = %s", HexEncode(b));
+		log.log(2, "Encrypted message = %s", HexEncode(encrypted));
 		
 		Date now = new Date();
 		String tnode = "" + now.getTime();
@@ -317,7 +318,7 @@ public class AppServer extends BaseServer {
 		String[] tnodes = UseStore("List", "c", channel).split("\n");
 		Arrays.sort(tnodes);
 
-		Say("listChannel: title=%s, id=%s, tnodes= %s", title, channel, Show(tnodes));
+		log.log(2, "listChannel: title=%s, id=%s, tnodes= %s", title, channel, Show(tnodes));
 
 		Ht items = new Ht();
 		for (String t : tnodes) {
@@ -326,11 +327,11 @@ public class AppServer extends BaseServer {
 			}
 			
 			String raw = UseStore("Fetch", "c", channel, "t", t);
-			Say("raw=%s", CurlyEncode(raw));
+			log.log(2, "raw=%s", CurlyEncode(raw));
 			Bytes b = HexDecodeIgnoringJunk(raw);
-			Say("Encrypted=%s", HexEncode(b));
+			log.log(2, "Encrypted=%s", HexEncode(b));
 			Bytes plain = chanKey.decryptBytes(b);
-			Say("Plain=%s", HexEncode(plain));
+			log.log(2, "Plain=%s", HexEncode(plain));
 			Message msg = Proto.UnpickleMessage(plain);
 			
 			long millis = Long.parseLong(t);
@@ -506,7 +507,7 @@ public class AppServer extends BaseServer {
 		for (int i = 0; i < kvkv.length; i+=2) {
 			url += Fmt("&%s=%s", kvkv[i], UrlEncode(kvkv[i+1]));
 		}
-		Say("UseStore: %s", url);
+		log.log(2, "UseStore: %s", url);
 		return FetchUrlText(url);
 	}
 
@@ -525,7 +526,7 @@ public class AppServer extends BaseServer {
 			}
 		}
 		String url = makeUrl(action(), PushBack(kvkv, "verb", verb));
-		Say("makeAppLink: %s", url);
+		log.log(2, "makeAppLink: %s", url);
 		return Ht.tag(null, "a", strings("href", url), text);
 	}
 }

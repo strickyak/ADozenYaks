@@ -242,7 +242,8 @@ public abstract class Yak {
 		StringBuffer sb = new StringBuffer();
 		sb.append("{arr ");
 		for (int i = 0; i < ss.length; i++) {
-			sb.append("[" + i + "]= " + CurlyEncode(ss[i]) + " ");
+			String ssi = ss[i] == null? "*null*" : ss[i];
+			sb.append("[" + i + "]= " + CurlyEncode(ssi) + " ");
 		}
 		sb.append("}");
 		return sb.toString();
@@ -574,6 +575,38 @@ public abstract class Yak {
 			 throw new RuntimeException(ex.toString());
 		}
 		// return new String(b, utf8);
+	}
+
+	public static String GetStackTrace(final Throwable e) {
+		final StringBuilder sb = new StringBuilder();
+		final OutputStream out = new OutputStream() {
+			@Override
+			public void write(int ch) throws IOException {
+				sb.append((char) ch);
+			}
+		};
+		final PrintStream ps = new PrintStream(out);
+		e.printStackTrace(ps);
+		return sb.toString();
+	}
+	
+	public static class Logger {
+		public int verbosity;
+		public void log(int level, String s, Object...args) {
+			if (level <= this.verbosity) {
+				System.err.println(tryFmt(s, args));
+			}
+		}
+		public void show(int level, Throwable ex) {
+			log(level, GetStackTrace(ex));
+		}
+		public final String tryFmt(String s, Object...args) {
+			try {
+				return Fmt(s, args);
+			} catch (Exception ex) {  // Don't let exception prevent logging.
+				return "Fmt Exception in Logger: " + ex + ": " + s;
+			}
+		}
 	}
 	
 	public static abstract class FileIO {

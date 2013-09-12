@@ -16,9 +16,11 @@ import android.util.Log;
 
 public abstract class BaseServer extends Yak implements Runnable {
 	int port;
+	public Logger log;
 
-	public BaseServer(int port) {
+	public BaseServer(int port, Logger logger) {
 		this.port = port;
+		this.log = logger == null ? new Logger() : logger;
 	}
 
 	public abstract Response handleRequest(Request req);
@@ -26,7 +28,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 	public void run() {
 		try {
 			final ServerSocket serverSocket = new ServerSocket(port);
-			System.err.println("Listening on port " + port);
+			log.log(0, "Listening on port " + port);
 			while (true) {
 				final Socket clientSocket = serverSocket.accept();
 

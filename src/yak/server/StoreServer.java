@@ -46,11 +46,11 @@ public class StoreServer extends BaseServer {
 		if (!(IsAlphaNum(magic))) {
 			throw Bad("magicWord must be alphaNum.");
 		}
-		new StoreServer(port, magic).run();
+		new StoreServer(port, magic, null).run();
 	}
 
-	public StoreServer(int port, String magicWord) {
-		super(port);
+	public StoreServer(int port, String magicWord, Logger logger) {
+		super(port, logger);
 		this.magicWord = magicWord;
 		System.err.println(Fmt("Hello, this is StoreServer on %d with %s", DEFAULT_PORT, magicWord));
 	}

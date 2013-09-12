@@ -9,7 +9,7 @@ public class DemoServer extends BaseServer {
 	}
 
 	public DemoServer(int port) {
-		super(port);
+		super(port, null);
 	}
 
 	public Response handleRequest(Request req) {

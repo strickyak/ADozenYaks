@@ -85,6 +85,7 @@ public class Yak12Activity extends Activity {
 	Context yakContext = this;
 	Handler yakHandler = new Handler();
 	private AppLogger log = new AppLogger(2);
+	private AppProgresser progresser = new AppProgresser();
 	
 	public Yak12Activity() {
 		log.log(1, "###### CTOR: " + this);
@@ -102,7 +103,8 @@ public class Yak12Activity extends Activity {
 					appMagic,
 					"http://yak.net:30332/YakButter",
 					new AndroidFileIO(),
-					log);
+					log,
+					progresser);
 			serverThread = new Thread(server);
 			serverThread.start();
 			Yak.sleepSecs(0.2);
@@ -402,8 +404,9 @@ public class Yak12Activity extends Activity {
 	static class EmbedAppServer extends AppServer {
 		
 		public EmbedAppServer(int port, String appMagicWord,
-				String storagePath, FileIO fileIO, Logger logger) {
-			super(port, appMagicWord, storagePath, fileIO, logger);
+				String storagePath, FileIO fileIO, Logger logger,
+				Progresser progresser) {
+			super(port, appMagicWord, storagePath, fileIO, logger, progresser);
 		}
 	}
 	
@@ -489,6 +492,15 @@ public class Yak12Activity extends Activity {
 			}
 		}
 	}
+	
+	public class AppProgresser extends Yak.Progresser {
+		public void progress(float percent, String s, Object...args) {
+			String msg = Fmt("[%6.1f] ", percent) + Fmt(s, args);
+			log.log(1, msg);
+			setContentView(new ATextView(msg));
+		}
+	}
+	
 	// Constants.
 
 	LayoutParams FILL = new LayoutParams(LayoutParams.FILL_PARENT,

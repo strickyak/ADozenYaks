@@ -20,7 +20,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 
 	public BaseServer(int port, Logger logger) {
 		this.port = port;
-		this.log = logger == null ? new Logger() : logger;
+		this.log = logger;
 	}
 
 	public abstract Response handleRequest(Request req);
@@ -94,7 +94,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 		public Request(BufferedReader reader) throws IOException {
 			// TODO -- BROKEN -- byte vs char probs. Might break on non-ASCII.
 			String line0 = reader.readLine();
-			System.err.println("GOT: " + line0);
+			// System.err.println("GOT: " + line0);
 			if (line0 == null) {
 				return;  // TODO: WHEN DOES THIS OCCUR?
 			}
@@ -103,7 +103,7 @@ public abstract class BaseServer extends Yak implements Runnable {
 			String key = "None";
 			String s;
 			while ((s = reader.readLine()) != null) {
-				System.err.println("Got: " + s);
+				// System.err.println("Got: " + s);
 				if (s.length() == 0) {
 					break;
 				}
@@ -129,8 +129,8 @@ public abstract class BaseServer extends Yak implements Runnable {
 				contentLength = Integer.parseInt(contentLenStr.trim());
 			}
 
-			System.err.println("CONTENT " + contentType + "#" + contentLenStr
-					+ "#" + contentLength);
+			// System.err.println("CONTENT " + contentType + "#" + contentLenStr
+			// 		+ "#" + contentLength);
 
 			// line0 splits on spaces, like
 			// "VERB /a/b/c?h=480&w=640 VERSION"
@@ -157,9 +157,9 @@ public abstract class BaseServer extends Yak implements Runnable {
 				ParseQueryPiecesToMap(new String(content), this.query);
 			}
 			
-			System.err.println(Fmt("PATH : %s", Show(path)));
+			// System.err.println(Fmt("PATH : %s", Show(path)));
 			for (String q : this.query.keySet()) {
-				System.err.println(Fmt("QUERY : %s -> %s", CurlyEncode(q), CurlyEncode(query.get(q))));
+				// System.err.println(Fmt("QUERY : %s -> %s", CurlyEncode(q), CurlyEncode(query.get(q))));
 			}
 		}
 

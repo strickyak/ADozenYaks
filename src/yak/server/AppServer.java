@@ -26,6 +26,7 @@ import yak.etc.BaseServer.Request;
 import yak.etc.BaseServer.Response;
 import yak.etc.Yak.Ht;
 import yak.etc.Yak;
+import yak.etc.Yak.Progresser;
 import yak.server.Proto.Friend;
 import yak.server.Proto.Message;
 import yak.server.Proto.Persona;
@@ -37,6 +38,7 @@ public class AppServer extends BaseServer {
 	private String appMagicWord;
 	private String storagePath;
 	private FileIO fileIO;
+	private Progresser progresser;
 	private Persona persona;
 	
 	private DH mySec = null;
@@ -66,18 +68,21 @@ public class AppServer extends BaseServer {
 			new AppServer(
 					port, magic,
 					Fmt("http://localhost:%d/%s", StoreServer.DEFAULT_PORT, magic),
-					null, null).run();
+					new JavaFileIO(), new Logger(), new Progresser()).run();
 		} catch (Exception e) {
 			System.err.println("CAUGHT: " + e);
 			e.printStackTrace();
 		}
 	}
 
-	public AppServer(int port, String appMagicWord, String storagePath, FileIO fileIO, Logger logger) {
+	public AppServer(
+			int port, String appMagicWord, String storagePath,
+			FileIO fileIO, Logger logger, Progresser progresser) {
 		super(port, logger);
 		this.appMagicWord = appMagicWord;
 		this.storagePath = storagePath;
-		this.fileIO = (fileIO == null) ? new JavaFileIO() : fileIO;
+		this.fileIO = fileIO;
+		this.progresser = progresser;
 		log.log(2, "Hello, this is AppServer on port=%d with magic=%s", DEFAULT_PORT, appMagicWord);
 		log.log(2, "Constructed storagePath=%s", storagePath);
 	}

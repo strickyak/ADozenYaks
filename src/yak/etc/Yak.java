@@ -590,7 +590,13 @@ public abstract class Yak {
 		return sb.toString();
 	}
 	
-	public static class Logger {
+	public static class Progresser extends Yak {
+		public void progress(float percent, String s, Object...args) {
+			System.err.println(Fmt("[%6.1f] ", percent) + Fmt(s, args));
+		}
+	}
+	
+	public static class Logger extends Yak {
 		public int verbosity;
 		public void log(int level, String s, Object...args) {
 			if (level <= this.verbosity) {

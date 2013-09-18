@@ -208,8 +208,8 @@ public class Yak12Activity extends Activity {
 		public void getUrlAndDisplay(final String url)
 				throws ClientProtocolException, IOException {
 			final AVerticalView vert = new AVerticalView();
-			ATextView tv = new ATextView(Yak.CurlyEncode(url));
-			tv.setTextColor(Color.WHITE);
+			ATextView tv = new ATextView("Running: " + url);
+			tv.setTextColor(Color.GRAY);
 			vert.addView(tv);
 			setContentView(vert);
 
@@ -218,7 +218,7 @@ public class Yak12Activity extends Activity {
 				public void run() {
 					String html = null;
 					try {
-						log.log(2, "<<< bg: " + CurlyEncode(url));
+						log.log(2, "<<< bg: " + url);
 						html = getUrl(url);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -227,13 +227,12 @@ public class Yak12Activity extends Activity {
 					}
 					final String finalHtml = html;
 
-					log.log(2, ">>> html: "
-							+ CurlyEncode(finalHtml));
+					// log.log(2, ">>> html: " + CurlyEncode(finalHtml));
 
 					yakHandler.post(new Runnable() {
 						@Override
 						public void run() {
-							log.log(2, CurlyEncode(finalHtml));
+							// log.log(2, CurlyEncode(finalHtml));
 							vert.addView(new AWebView(finalHtml));
 						}
 					});
@@ -254,17 +253,16 @@ public class Yak12Activity extends Activity {
 				response.getEntity().writeTo(out);
 				out.close();
 				String responseString = out.toString();
-				log.log(2, "getUrl >> " + CurlyEncode(responseString));
+				log.log(2, "getUrl >> " + responseString);
 				return responseString;
 			} else {
 				// Closes the connection.
 				response.getEntity().getContent().close();
-				log.log(2, "getUrl >>BAD>> " + CurlyEncode(statusLine.getReasonPhrase()));
+				log.log(2, "getUrl >>BAD>> " + statusLine.getReasonPhrase());
 				throw new IOException(statusLine.getReasonPhrase());
 			}
 		}
 	}
-
 
 	public class AWebView extends WebView {
 

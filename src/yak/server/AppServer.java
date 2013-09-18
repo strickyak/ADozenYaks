@@ -108,8 +108,10 @@ public class AppServer extends BaseServer {
 	
 	class Handlers {
 		Response response;
+		Request req;
 
 		public Handlers(Request req) {
+			this.req = req;
 			log.log(2, "Req %s", req);
 			log.log(2, "AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
 
@@ -160,15 +162,37 @@ public class AppServer extends BaseServer {
 				response = new Response("!\r\nERROR:\r\n" + e.getMessage(), 200,
 						"text/plain");
 			}
-
+			
+			// Standard footer with breadcrumbs.
+			z.addTag("hr", null);
+			z.add("▶");
+			z.add(" ");
+			z.add(makeAppLink("TOP", "Top"));
+			
+			String pers = req.query.get("persona");
+			if (pers != null && pers.length() > 0) {
+				z.add(" ");
+				z.add("▶");
+				z.add(" ");
+				z.add(makeAppLink(pers, "Persona", "persona", pers));
+				
+				String fname = req.query.get("fname");
+				if (fname != null && fname.length() > 0) {
+					z.add(" ");
+					z.add("▶");
+					z.add(" ");
+					z.add(makeAppLink(fname, "ViewFriend", "persona", pers, "fname", fname));
+				}
+			}
 			response = new Response(z.toString(), 200, "text/html");
 		}
 
 		private Ht doTop() {
 			log.log(1, "LISTING FILES");
 			String[] files = fileIO.listFiles();
-			Pattern p = Pattern.compile("dozen_([a-z][a-z0-9]*)\\.pb");
+			Pattern p = Pattern.compile("([a-z][a-z0-9]*)\\.[Pp][Pp][Bb]");
 			ArrayList<String> personaList = new ArrayList<String>();
+			
 			for (String f : files) {
 				log.log(2, "File: %s", f);
 				Matcher m = p.matcher(f);
@@ -177,6 +201,7 @@ public class AppServer extends BaseServer {
 					personaList.add(m.group(1));
 				}
 			}
+			
 			// Convert to array personae, and sort.
 			String[] personae = new String[personaList.size()];
 			personaList.toArray(personae);
@@ -411,14 +436,14 @@ public class AppServer extends BaseServer {
 
 			Ht z = new Ht(Fmt("Confirm peering with name '%s'.", theirName));
 			z.addTag("p", null);
-			z.add(Fmt("For your security, make sure that you BOTH got checksum '%s'.", check));
+			z.add(Fmt("To be certain whom you peered with, make sure that you BOTH got checksum '%s'.", check));
 			z.addTag("p", null);
 
 			Ht inputs = new Ht("");
 			inputs.addTag("input", strings("type", "hidden", "name", "name", "value", theirName));
 			inputs.addTag("input", strings("type", "hidden", "name", "pub", "value", theirPub));
 			Ht.tag(inputs, "input", strings("type", "hidden", "name", "verb", "value", "Rendez3"));
-			Ht.tag(inputs, "input", strings("type", "submit", "name", "submit", "value", "Confirm"));
+			Ht.tag(inputs, "input", strings("type", "submit", "name", "submit", "value", "Confirm " + check));
 
 			z.addTag("form", strings("method", "GET", "action", action()), inputs);
 			return z;
@@ -454,7 +479,7 @@ public class AppServer extends BaseServer {
 			Bytes b = new Bytes();
 			Proto.PicklePersona(persona, b);
 			try {
-				DataOutputStream dos = fileIO.openDataFileOutput(Fmt("dozen_%s.pb", persona.name));
+				DataOutputStream dos = fileIO.openDataFileOutput(Fmt("%s.ppb", persona.name));
 				dos.write(b.arr, b.off, b.len);
 				dos.close();
 			} catch (IOException e) {
@@ -464,7 +489,7 @@ public class AppServer extends BaseServer {
 		}
 		private void loadPersona(String name) {
 			try {
-				DataInputStream dis = fileIO.openDataFileInput(Fmt("dozen_%s.pb", name));
+				DataInputStream dis = fileIO.openDataFileInput(Fmt("%s.ppb", name));
 				int avail = dis.available();
 				byte[] b = new byte[avail];
 				dis.readFully(b);
@@ -542,4 +567,6 @@ public class AppServer extends BaseServer {
 			return Ht.tag(null, "a", strings("href", url), text);
 		}
 	}
+	
+	public static final Ht nbsp = Ht.entity("nbsp");
 }

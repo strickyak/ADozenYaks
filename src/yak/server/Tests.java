@@ -5,9 +5,35 @@ import yak.etc.Hash;
 import yak.etc.Yak;
 import yak.server.Proto.Friend;
 import yak.server.Proto.Room;
-import junit.framework.TestCase;
 
 public class Tests extends Yak {
+	
+	public void testVarInt() {
+		Bytes b = new Bytes();
+		b.appendProtoInt(1, 100);
+		b.appendProtoInt(2, 10000);
+		b.appendProtoInt(3, 1000000);
+		b.appendProtoInt(4, -10);
+		b.appendProtoInt(5, -1000000);
+		System.err.print(b.showProto());
+		
+		assertEquals(1 << 3, b.popVarInt());
+		assertEquals(b.popVarInt(), 100);
+		
+		assertEquals(2 << 3, b.popVarInt());
+		assertEquals(b.popVarInt(), 10000);
+		
+		assertEquals(3 << 3, b.popVarInt());
+		assertEquals(b.popVarInt(), 1000000);
+		
+		assertEquals(4 << 3, b.popVarInt());
+		assertEquals(b.popVarInt(), -10);
+		
+		assertEquals(5 << 3, b.popVarInt());
+		assertEquals(b.popVarInt(), -1000000);
+		
+		assertEquals(0, b.len);
+	}
 
 	public void testEncrypt() {
 		Hash key = new Hash("This is the key.");
@@ -65,6 +91,7 @@ public class Tests extends Yak {
 	public static void main(String[] args) {
 		new Tests().testFriend();
 		new Tests().testEncrypt();
+		new Tests().testVarInt();
 	}
 }
 

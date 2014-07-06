@@ -24,8 +24,6 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
-import android.content.Context;
-
 public abstract class Yak {
 
 	public static String[] strings(String ...args) {
@@ -86,14 +84,22 @@ public abstract class Yak {
 		return bytes;
 	}
 
-	public static void sleepSecs(double secs) {
+	public static void SleepSecs(double secs) {
 		try {
 			Thread.sleep((long) (secs * 1000) /* ms */);
 		} catch (InterruptedException e) {
-			// pass.
+			; // pass.
 		}
 	}
 
+	public static String BytesToString(Bytes bytes) {
+		final int n = bytes.len;
+		char[] chars = new char[n];
+		for (int i = 0; i < n; i++) {
+			chars[i] = (char) (255&bytes.arr[bytes.off + i]);
+		}
+		return String.valueOf(chars);
+	}
 	public static String BytesToString(byte[] bytes) {
 		final int n = bytes.length;
 		char[] chars = new char[n];
@@ -221,6 +227,7 @@ public abstract class Yak {
 		return z;
 	}
 
+	@SuppressWarnings("rawtypes")
 	public static String Show(HashMap map) {
 		if (map == null) {
 			return "{map IS_NULL}";
@@ -240,7 +247,7 @@ public abstract class Yak {
 			return "{arr IS_NULL}";
 		}
 		StringBuffer sb = new StringBuffer();
-		sb.append("{arr ");
+		sb.append(Fmt("{arr*%d ", ss.length));
 		for (int i = 0; i < ss.length; i++) {
 			String ssi = ss[i] == null? "*null*" : ss[i];
 			sb.append("[" + i + "]= " + CurlyEncode(ssi) + " ");
@@ -315,7 +322,6 @@ public abstract class Yak {
 	}
 
 	public static String ReadAllText(InputStream in) throws IOException {
-		// TODO Auto-generated method stub
 		StringBuffer sb = new StringBuffer();
 		while (true) {
 			int x = in.read();
@@ -341,11 +347,11 @@ public abstract class Yak {
 		return s;
 	}
 
-	public static String htmlEscape(String s) {
-		return htmlEscape(s, false);
+	public static String HtmlEscape(String s) {
+		return HtmlEscape(s, false);
 	}
 
-	public static String htmlEscape(String s, boolean lineBreaks) {
+	public static String HtmlEscape(String s, boolean lineBreaks) {
 		StringBuffer sb = new StringBuffer();
 		final int n = s.length();
 		for (int i = 0; i < n; i++) {
@@ -407,7 +413,7 @@ public abstract class Yak {
 		}
 
 		public Ht(String fmt, Object...args) {
-			this.sb = new StringBuffer(htmlEscape(Fmt(fmt, args)));
+			this.sb = new StringBuffer(HtmlEscape(Fmt(fmt, args)));
 		}
 
 		public String toString() {
@@ -415,7 +421,7 @@ public abstract class Yak {
 		}
 
 		public Ht add(String fmt, Object...args) {
-			sb.append(htmlEscape(Fmt(fmt, args)));
+			sb.append(HtmlEscape(Fmt(fmt, args)));
 			return this;
 		}
 
@@ -440,7 +446,7 @@ public abstract class Yak {
 					assert htmlTagP.matcher(args[i]).matches();
 					Say("HT TAG PARAM: %s -> {%s}", args[i], args[i+1]);
 					z.sb.append(Fmt("%s=\"%s\" ", args[i],
-							htmlEscape(args[i + 1])));
+							HtmlEscape(args[i + 1])));
 				}
 			}
 			z.sb.append(Fmt(">%s</%s\n>", body, type));
@@ -559,14 +565,12 @@ public abstract class Yak {
 		}
 	}
 
-	// public static Charset utf8 = Charset.forName("utf-8");
 	public static byte[] StringToUtf8(String s) {
 		try {
 			return s.getBytes("utf-8");
 		} catch (UnsupportedEncodingException ex) {
 			 throw new RuntimeException(ex.toString());
 		}
-		// return s.getBytes(utf8);
 	}
 	public static String Utf8ToString(byte[] b) {
 		try {
@@ -574,7 +578,6 @@ public abstract class Yak {
 		} catch (UnsupportedEncodingException ex) {
 			 throw new RuntimeException(ex.toString());
 		}
-		// return new String(b, utf8);
 	}
 
 	public static String GetStackTrace(final Throwable e) {

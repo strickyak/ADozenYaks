@@ -129,9 +129,6 @@ public abstract class BaseServer extends Yak implements Runnable {
 				contentLength = Integer.parseInt(contentLenStr.trim());
 			}
 
-			// System.err.println("CONTENT " + contentType + "#" + contentLenStr
-			// 		+ "#" + contentLength);
-
 			// line0 splits on spaces, like
 			// "VERB /a/b/c?h=480&w=640 VERSION"
 			String[] words = line0.split(" ");
@@ -155,11 +152,6 @@ public abstract class BaseServer extends Yak implements Runnable {
 							contentLength - countToGO, countToGO);
 				}				
 				ParseQueryPiecesToMap(new String(content), this.query);
-			}
-			
-			// System.err.println(Fmt("PATH : %s", Show(path)));
-			for (String q : this.query.keySet()) {
-				// System.err.println(Fmt("QUERY : %s -> %s", CurlyEncode(q), CurlyEncode(query.get(q))));
 			}
 		}
 

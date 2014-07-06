@@ -84,8 +84,8 @@ public class Yak12Activity extends Activity {
 			AppServer.DEFAULT_PORT, appMagic));;
 	Context yakContext = this;
 	Handler yakHandler = new Handler();
-	private AppLogger log = new AppLogger(2);
-	private AppProgresser progresser = new AppProgresser();
+	private DozenLogger log = new DozenLogger(2);
+	private DozenProgresser progresser = new DozenProgresser();
 	
 	public Yak12Activity() {
 		log.log(1, "###### CTOR: " + this);
@@ -107,7 +107,7 @@ public class Yak12Activity extends Activity {
 					progresser);
 			serverThread = new Thread(server);
 			serverThread.start();
-			Yak.sleepSecs(0.2);
+			Yak.SleepSecs(0.2);
 		}
 
 		Intent intent = getIntent();
@@ -223,7 +223,7 @@ public class Yak12Activity extends Activity {
 					} catch (Exception e) {
 						e.printStackTrace();
 						html = "getUrlAndDisplay ERROR:<br>"
-								+ htmlEscape(e.toString());
+								+ HtmlEscape(e.toString());
 					}
 					final String finalHtml = html;
 
@@ -477,8 +477,8 @@ public class Yak12Activity extends Activity {
 		return sb.toString();
 	}
 	
-	public class AppLogger extends Logger {
-		public AppLogger(int verbosity) {
+	public class DozenLogger extends Logger {
+		public DozenLogger(int verbosity) {
 			this.verbosity = verbosity;
 		}
 		@Override
@@ -491,7 +491,7 @@ public class Yak12Activity extends Activity {
 		}
 	}
 	
-	public class AppProgresser extends Yak.Progresser {
+	public class DozenProgresser extends Yak.Progresser {
 		public void progress(float percent, String s, Object...args) {
 			String msg = Fmt("[%6.1f] ", percent) + Fmt(s, args);
 			log.log(1, msg);

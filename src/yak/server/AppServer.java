@@ -1,12 +1,8 @@
 package yak.server;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -14,23 +10,11 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.http.HttpEntity;
-
-import android.util.Log;
-
 import yak.etc.BaseServer;
 import yak.etc.Bytes;
 import yak.etc.DH;
 import yak.etc.Hash;
-import yak.etc.BaseServer.Request;
-import yak.etc.BaseServer.Response;
-import yak.etc.Yak.Ht;
-import yak.etc.Yak;
-import yak.etc.Yak.Progresser;
-import yak.server.Proto.Friend;
-import yak.server.Proto.Message;
-import yak.server.Proto.Persona;
-import yak.server.Proto.Room;
+import yak.server.Proto;
 
 public class AppServer extends BaseServer {
 
@@ -39,41 +23,9 @@ public class AppServer extends BaseServer {
 	private String storagePath;
 	private FileIO fileIO;
 	private Progresser progresser;
-	private Persona persona;
+	private Proto.Persona persona;
 
 	private DH mySec = null;
-
-	public static void main(String[] args) {
-		try {
-			String magic = "magic";
-			int port = DEFAULT_PORT;
-			for (int i = 0; i < args.length; i += 2) {
-				if (args[i].equals("-p")) {
-					port = Integer.parseInt(args[i+1]);
-				} else if (args[i].equals("-m")) {
-					magic = args[i+1];
-				} else {
-					Bad("Unknown arg: %s", args[i]);
-				}
-			}
-			if (port < 1024) {
-				Bad("Port under 1024: %d", port);
-			}
-			if (!(IsAlphaNum(magic))) {
-				throw Bad("magicWord must be alphaNum.");
-			}
-
-			// new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magic)).start();
-
-			new AppServer(
-					port, magic,
-					Fmt("http://localhost:%d/%s", StoreServer.DEFAULT_PORT, magic),
-					new JavaFileIO(), new Logger(), new Progresser()).run();
-		} catch (Exception e) {
-			System.err.println("CAUGHT: " + e);
-			e.printStackTrace();
-		}
-	}
 
 	public AppServer(
 			int port, String appMagicWord, String storagePath,
@@ -91,17 +43,6 @@ public class AppServer extends BaseServer {
 		return "/" + appMagicWord;
 	}
 
-	private static String param(Request req, String key) {
-		String x = req.query.get(key);
-		if (x == null) {
-			Bad("Missing Query Parameter: %s", key); 
-		}
-		if (!IsAlphaNum(x)) {
-			Bad("Query Parameter Not AlphaNum: %s", CurlyEncode(key));
-		}
-		return x;
-	}
-
 	public Response handleRequest(Request req) {
 		return new Handlers(req).response;
 	}
@@ -113,8 +54,9 @@ public class AppServer extends BaseServer {
 			log.log(2, "Req %s", req);
 			log.log(2, "AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
 
-			if (req.path[0].equals("favicon.ico")) {
-				response = new Response("No favicon.ico here.", 404, "text/plain");
+			if (req.path.length == 1 && req.path[0].equals("favicon.ico")) {
+				response = new Response("! No favicon.ico here.", 404, "text/plain");
+				return;
 			}
 			if (!(req.path[0].equals(appMagicWord))) {
 				throw Bad("Bad Magic Word: %s", Show(req.path));
@@ -122,6 +64,7 @@ public class AppServer extends BaseServer {
 
 			String verb = req.query.get("verb");
 
+			// Strange hack.  Is it used?  Unbundle the query "query" and add its parts.
 			String query = req.query.get("query");
 			if (query != null) {
 				Request.ParseQueryPiecesToMap(query, req.query);
@@ -161,7 +104,26 @@ public class AppServer extends BaseServer {
 						"text/plain");
 			}
 
+			z.addTag("hr", null);
+			addBreadcrumbs(z, req);
 			response = new Response(z.toString(), 200, "text/html");
+		}
+		
+		private void addBreadcrumbs(Ht z, Request req) {
+			z.add(CRUMB);
+			z.add(makeAppLink("TOP", "Top"));
+
+			String pers = req.query.get("persona");
+			if (pers != null && pers.length() > 0) {
+				z.add(CRUMB);
+				z.add(makeAppLink(pers, "Persona", "persona", pers));
+
+				String fname = req.query.get("fname");
+				if (fname != null && fname.length() > 0) {
+					z.add(CRUMB);
+					z.add(makeAppLink(fname, "ViewFriend", "persona", pers, "fname", fname));
+				}
+			}
 		}
 
 		private Ht doTop() {
@@ -207,7 +169,7 @@ public class AppServer extends BaseServer {
 			String name = q.get("name");
 
 			DH sec = DH.RandomKey();
-			persona = new Persona();
+			persona = new Proto.Persona();
 			persona.name = name;
 			persona.dhsec = sec.toString();
 			persona.dhpub = sec.publicKey().toString();
@@ -224,13 +186,13 @@ public class AppServer extends BaseServer {
 			Ht choices = new Ht();
 			choices.addTag("li", null, makeAppLink("Add a friend (Peering Ceremony)", "Rendez"));
 
-			for (Room r : persona.room) {
+			for (Proto.Room r : persona.room) {
 				choices.addTag("li", null, makeAppLink("Your room: " + r.name, "ViewRoom", "rname", r.name + "@" + persona.name));
 			}
-			for (Friend f : persona.friend) {
+			for (Proto.Friend f : persona.friend) {
 				choices.addTag("li", null, makeAppLink("Your friend: " + f.name, "ViewFriend", "fname", f.name));
 
-				for (Room r : f.room) {
+				for (Proto.Room r : f.room) {
 					choices.addTag("li", null, makeAppLink("Your friend's room: " + r.name + "@" + f.name, "ShowRoom", "rname", r.name + "@" + f.name));
 				}
 			}
@@ -241,7 +203,7 @@ public class AppServer extends BaseServer {
 			return z;
 		}
 
-		private String mutual(Friend f) {
+		private String mutual(Proto.Friend f) {
 			Must(f.dhpub != null, "Null dhpub for friend: %s", f.name);
 			Must(f.dhpub.length() > 0, "Empty dhpub for friend: %s", f.name);
 			if (f.dhmut == null || f.dhmut.length() == 0) {
@@ -250,21 +212,21 @@ public class AppServer extends BaseServer {
 			return f.dhmut;
 		}
 
-		private String friendChannelId(Friend f) {
+		private String friendChannelId(Proto.Friend f) {
 			String z = new Hash(mutual(f), "FriendChannelId").asMediumString();
 			log.log(2, "friendChannelId: me=%s friend=%s chanId=%s", persona.name, f.name, z);
 			return z;
 		}
 
-		private Hash friendChannelKey(Friend f) {
+		private Hash friendChannelKey(Proto.Friend f) {
 			Hash z = new Hash(mutual(f), "FriendChannelKey");
 			log.log(2, "friendChannelKey: me=%s friend=%s chanKey=%s", persona.name, f.name, z);
 			return z;
 		}
 
-		private void postTextToFriendChannel(Friend f, String message) throws IOException {
-			Message msg = new Message();
-			msg.body = Fmt("(From %s) %s", persona.name, message);
+		private void postTextToFriendChannel(Proto.Friend f, String message) throws IOException {
+			Proto.Message msg = new Proto.Message();
+			msg.text = Fmt("(From %s) %s", persona.name, message);
 			Bytes b = new Bytes();
 			Proto.PickleMessage(msg, b);
 
@@ -290,7 +252,7 @@ public class AppServer extends BaseServer {
 			Must(fname != null, "doVerbViewFriend: Missing fname param");
 			Must(IsDecent(fname), "doVerbViewFriend: Bad fname param: %s", fname);
 
-			Friend f = findFriend(fname);
+			Proto.Friend f = findFriend(fname);
 			Must(f != null, "doVerbViewFriend: Cannot find friend %s", fname);
 
 			postTextToFriendChannel(f, data);
@@ -307,7 +269,7 @@ public class AppServer extends BaseServer {
 			Must(fname != null, "doVerbViewFriend: Missing fname param");
 			Must(IsDecent(fname), "doVerbViewFriend: Bad fname param: %s", fname);
 
-			Friend f = findFriend(fname);
+			Proto.Friend f = findFriend(fname);
 			Must(f != null, "doVerbViewFriend: Cannot find friend %s", fname);
 
 			String chanId = friendChannelId(f);
@@ -326,6 +288,7 @@ public class AppServer extends BaseServer {
 			page.addTag("form", strings("method", "POST", "action", action()), formGuts);
 			return page;
 		}
+		
 		private Ht listChannel(String title, String channel, Hash chanKey) throws IOException {
 			String[] tnodes = UseStore("List", "c", channel).split("\n");
 			Arrays.sort(tnodes);
@@ -344,12 +307,12 @@ public class AppServer extends BaseServer {
 				log.log(2, "Encrypted=%s", HexEncode(b));
 				Bytes plain = chanKey.decryptBytes(b);
 				log.log(2, "Plain=%s", HexEncode(plain));
-				Message msg = Proto.UnpickleMessage(plain);
+				Proto.Message msg = Proto.UnpickleMessage(plain);
 
 				long millis = Long.parseLong(t);
 				Date date = new Date(millis);
 
-				items.addTag("li", null, Fmt("%s = %s: %s", t, date, msg.body));
+				items.addTag("li", null, Fmt("%s = %s: %s", t, date, msg.text));
 			}
 
 			Ht page = new Ht();
@@ -362,7 +325,6 @@ public class AppServer extends BaseServer {
 		/** doVerbRendez tells our peer code and requests peer code of future pal. */
 		private Ht doVerbRendez(HashMap<String,String> q) throws IOException {
 			String myNewCode = Integer.toString(DH.randomInt(899) + 100);  // Choose from 100..999
-			Ht text = new Ht("Your code is " + myNewCode + "<P> Enter friend's code: <BR>");
 			Ht body = new Ht();
 			body.add("Your code is " + myNewCode);
 			Ht.tag(body, "p", null);
@@ -381,44 +343,38 @@ public class AppServer extends BaseServer {
 
 		/** doVerbRendez2 does the DH Public Key Exchange. */
 		private Ht doVerbRendez2(HashMap<String,String> q) throws IOException {
-			String mine = Fmt("DH_%s_%s_HD", persona.name, persona.dhpub);
+			Proto.DhRequest myDhR = new Proto.DhRequest();
+			myDhR.name = persona.name;
+			myDhR.dhpub = persona.dhpub;
+			Bytes myBytes = new Bytes();
+			Proto.PickleDhRequest(myDhR, myBytes);
+			String mine = BytesToString(myBytes);
 
-			String x = UseStore("Rendez", "me", q.get("me"), "you", q.get("you"), "v", mine);
-
-			if (x==null || x.length()==0 || x.charAt(0)=='!') {
+			String received = UseStore("Rendez", "me", q.get("me"), "you", q.get("you"), "v", mine);
+			if (received==null || received.length()==0 || received.charAt(0)=='!') {
 				return new Ht("Peering failed.  Go back and try again.");
 			}
-			String[] w = x.split("_");
-			if (w.length < 4) {
-				throw Bad("Received peering value too short: [%d] %s", w.length, UrlEncode(x));
-			}
-			if (!IsAlphaNum(w[0]) || !IsAlphaNum(w[1]) || !IsAlphaNum(w[2]) || !IsAlphaNum(w[3])) {
-				throw Bad("Received peering values not alphanum: %s", x);
-			}
-			if (!w[0].equals("DH") || !w[3].equals("HD")) {
-				throw Bad("Not magic numbers: %s, %s", w[0], w[3]);
-			}
-			String theirName = w[1];
-			String theirPub = w[2];
-			Friend f = findFriend(theirName);
-			if (f != null) {
+			Proto.DhRequest theirDhR = Proto.UnpickleDhRequest(new Bytes(received));
+			
+			Proto.Friend oldFriend = findFriend(theirDhR.name);
+			if (oldFriend != null) {
 				// TODO: handle ambiguous names.
-				throw Bad("Already have a friend named %s", theirName);
+				throw Bad("Already have a friend named %s", theirDhR.name);
 			}
-			DH theirDH = new DH(theirPub);
+			DH theirDH = new DH(theirDhR.name);
 			DH mutualDH = mySec.mutualKey(theirDH);
 			String check = new Hash(mutualDH.toString()).asShortString();
 
-			Ht z = new Ht(Fmt("Confirm peering with name '%s'.", theirName));
+			Ht z = new Ht(Fmt("Confirm peering with name '%s'.", theirDhR.name));
 			z.addTag("p", null);
-			z.add(Fmt("For your security, make sure that you BOTH got checksum '%s'.", check));
+			z.add(Fmt("To be certain whom you peered with, make sure that you BOTH got checksum '%s'.", check));
 			z.addTag("p", null);
 
 			Ht inputs = new Ht("");
-			inputs.addTag("input", strings("type", "hidden", "name", "name", "value", theirName));
-			inputs.addTag("input", strings("type", "hidden", "name", "pub", "value", theirPub));
+			inputs.addTag("input", strings("type", "hidden", "name", "name", "value", theirDhR.name));
+			inputs.addTag("input", strings("type", "hidden", "name", "pub", "value", theirDhR.dhpub));
 			Ht.tag(inputs, "input", strings("type", "hidden", "name", "verb", "value", "Rendez3"));
-			Ht.tag(inputs, "input", strings("type", "submit", "name", "submit", "value", "Confirm"));
+			Ht.tag(inputs, "input", strings("type", "submit", "name", "submit", "value", "Confirm " + check));
 
 			z.addTag("form", strings("method", "GET", "action", action()), inputs);
 			return z;
@@ -428,12 +384,12 @@ public class AppServer extends BaseServer {
 		private Ht doVerbRendez3(HashMap<String,String> q) throws IOException {
 			String theirName = q.get("name");
 			String theirPub = q.get("pub");
-			Friend f = findFriend(theirName);
+			Proto.Friend f = findFriend(theirName);
 			if (f != null) {
 				// TODO: handle ambiguous names.
 				Bad("Already have a friend named %s", theirName);
 			}
-			f = new Friend();
+			f = new Proto.Friend();
 			f.name = theirName;
 			f.dhpub = theirPub;
 			f.dhmut = mutual(f);
@@ -476,9 +432,9 @@ public class AppServer extends BaseServer {
 				Bad("Cannot load persona: %s", e);
 			}
 		}
-		private Friend findFriend(String sought) {
+		private Proto.Friend findFriend(String sought) {
 			// TODO: disambiguate with alias or hash
-			for (Friend f : persona.friend) {
+			for (Proto.Friend f : persona.friend) {
 				if (f.name.equals(sought)) {
 					return f;
 				}
@@ -486,7 +442,7 @@ public class AppServer extends BaseServer {
 			return null;
 		}
 
-		private Room findRoom(String sought) {
+		private Proto.Room findRoom(String sought) {
 			String[] w = sought.split("@");
 			if (w.length == 2) {
 				return findRoom(w[0], w[1]);
@@ -494,11 +450,11 @@ public class AppServer extends BaseServer {
 				throw Bad("Bad room name: %s", sought);
 			}
 		}
-		private Room findRoom(String soughtRoom, String soughtFriend) {
-			Friend f = findFriend(soughtFriend);
+		private Proto.Room findRoom(String soughtRoom, String soughtFriend) {
+			Proto.Friend f = findFriend(soughtFriend);
 			if (f != null) {
 				// TODO: disambiguate with alias or hash
-				for (Room r : f.room) {
+				for (Proto.Room r : f.room) {
 					if (r.name.equals(soughtRoom)) {
 						return r;
 					}
@@ -542,4 +498,7 @@ public class AppServer extends BaseServer {
 			return Ht.tag(null, "a", strings("href", url), text);
 		}
 	}
+	
+	public static final Ht nbsp = Ht.entity("nbsp");
+	public static final String CRUMB = " ▶ ";
 }

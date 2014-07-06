@@ -19,6 +19,7 @@ public class Bytes extends Yak {
 	}
 
 	public Bytes(int len, int cap) {
+		Must(cap >= len);
 		this.arr = new byte[cap];
 		this.off = 0;
 		this.len = len;
@@ -32,6 +33,10 @@ public class Bytes extends Yak {
 	
 	public Bytes(byte[] a) {
 		this(a, 0, a.length);
+	}
+	
+	public Bytes(String s) {
+		this(StringToBytes(s));
 	}
 	
 	public Bytes(Bytes a) {
@@ -52,10 +57,11 @@ public class Bytes extends Yak {
 		}
 	}
 	
-	int measureInt(int x) {
+	static int measureInt(int x) {
+		long xx = ((long)x & 0xFFFF);
 		int z = 1;
 		long ceiling = 128;
-		while (x >= ceiling) {
+		while (xx >= ceiling) {
 			++z;
 			ceiling += ceiling;
 		}
@@ -63,17 +69,20 @@ public class Bytes extends Yak {
 	}
 	
 	void appendVarInt(int x) {
-		System.err.println(Fmt("appendVarInt<<< %d", x));
-		while (x >= 128) {
-			byte z = (byte) ((x&127) | 128);
+		//System.err.printf("appendVarInt1: %d == 0x%x\n", x, x);
+		long xx = (((long)x) & 0xFFFFFFFFL);
+		//System.err.printf("appendVarInt2: %d == 0x%x\n", xx, xx);
+		while (xx >= 128) {
+			byte z = (byte) ((xx&127) | 128);
 			appendByte(z);
-			x >>>= 7;
+			//System.err.printf(".......: %d -> %d\n", xx, z);
+			xx >>>= 7;
 		}
-		appendByte((byte)x);
+		appendByte((byte)xx);
+		//System.err.printf("..............: -> %d\n", xx);
 	}
 	
 	void appendByte(byte x) {
-		System.err.println(Fmt("appendByte<<< %02x  >>> (len=%d)", x, len+1));
 		growCapBy(1);
 		arr[off + len] = x;
 		++len;
@@ -81,10 +90,7 @@ public class Bytes extends Yak {
 
 	public void appendProtoString(int tag, String s) {
 		byte[] a = StringToBytes(s);
-		System.err.println(Fmt("appendProtoString %d: <<< [%d] %s", tag, s.length(), CurlyEncode(s)));
 		appendProtoBytes(tag, a);
-
-		System.err.println(Fmt("  >>> (len=%d) .... %s ", len, this));
 	}
 
 	public void appendProtoBytes(int tag, byte[] x) {
@@ -92,7 +98,6 @@ public class Bytes extends Yak {
 	}
 
 	public void appendProtoBytes(int tag, Bytes a) {
-		System.err.println(Fmt("appendProtoString %d: <<< [%d] %s", tag, a.len, HexEncode(a.asByteArray())));
 		int code = (tag << 3) | 2;
 		appendVarInt(code);
 		appendVarInt(a.len);
@@ -126,7 +131,6 @@ public class Bytes extends Yak {
 			z |= ((b & 127) << shift);
 			shift += 7;
 		}
-		System.err.println(Fmt("popVarInt %d off=%d len=%d", z, off, len));
 		return z;
 	}
 
@@ -163,7 +167,6 @@ public class Bytes extends Yak {
 		byte z = arr[off];
 		++off;
 		--len;
-		System.err.println(Fmt("popByte x%02x off=%d len=%d", z, off, len));
 		return z;
 	}
 	
@@ -202,7 +205,7 @@ public class Bytes extends Yak {
 		StringBuffer sb = new StringBuffer();
 		try {
 			while (a.len > 0) {
-				sb.append("..." + CurlyEncode(BytesToString(asByteArray())) + "...\n");
+				sb.append("..." + CurlyEncode(BytesToString(a.asByteArray())) + "...\n");
 				int t = a.popVarInt();
 				int tag = t >>> 3;
 				int type = t & 7;
@@ -217,6 +220,9 @@ public class Bytes extends Yak {
 						String x = a.popVarString();
 						sb.append("str= " + CurlyEncode(x));
 					}
+					break;
+					default:
+						Bad("showProto: Bad type %d", type);
 				}
 				sb.append("\n");
 			}

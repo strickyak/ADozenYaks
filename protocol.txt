@@ -1,24 +1,43 @@
-define Room
+define Room = 49
   String name = 1
   String title = 2
   repeated String member = 3
 
-define Friend
+define Member = 50
   String name = 1
   String hash = 2
   String alias = 3
   String dhpub = 4
   repeated String hub = 5
   String contact = 6
+
+define Friend extends Member = 51
   String remark = 7
   repeated Room room = 8
-  String dhmut = 11
+  String dhmut = 9
 
-define Persona extends Friend
-  String dhsec = 9
-  repeated Friend friend = 10
+define Persona extends Friend = 52
+  String dhsec = 11
+  repeated Friend friend = 12
 
-define Message
+define DhRequest = 53
+  String name = 1
+  String dhpub = 2
+
+define Message = 54
   int direction = 1
-  String action = 2
-  String body = 3
+  String room_name = 2   # Empty if no room
+  String room_owner = 3  # Empty if no room
+
+define TextMessage extends Message = 55
+  String text = 12
+
+define MembersOfRoom extends Message = 56
+  repeated Member members = 13
+
+define InviteToRoom extends Message = 57
+  repeated String member_names = 14
+
+define AcceptToRoom extends Message = 58
+
+

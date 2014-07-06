@@ -69,8 +69,7 @@ public class Tests extends Yak {
 		r2.member.add("Zoe");
 		f.room.add(r2);
 		
-		Bytes b = new Bytes();
-		Proto.PickleFriend(f, b);
+		Bytes b = f.pickle();
 
 		Yak.Say("=" + b);
 		Yak.Say("=" + b.showProto());

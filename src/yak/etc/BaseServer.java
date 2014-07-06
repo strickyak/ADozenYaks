@@ -53,15 +53,15 @@ public abstract class BaseServer extends Yak implements Runnable {
 	public static final Charset LATIN_1 = Charset.forName("ISO-8859-1");
 
 	public void handleConnection(Socket clientSocket) throws IOException {
+		BufferedReader reader = new BufferedReader(new InputStreamReader(
+				clientSocket.getInputStream(), LATIN_1));
+		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+				clientSocket.getOutputStream()));
 		try {
-			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					clientSocket.getInputStream(), LATIN_1));
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-					clientSocket.getOutputStream()));
 			Request r = new Request(reader);
 
 			// Call overridden handleRequest(r).
-			Response w = handleRequest(r);
+			Response w = this.handleRequest(r);
 
 			writer.write("HTTP/1.0 " + w.responseCode + " " + w.responseCode
 					+ "\r\n");
@@ -69,6 +69,15 @@ public abstract class BaseServer extends Yak implements Runnable {
 			writer.write("Content-Length: " + w.payload.length() + "\r\n");
 			writer.write("\r\n");
 			writer.write(w.payload);
+			writer.close();
+			reader.close();
+		} catch (Throwable ex) {
+			String trace = Yak.GetStackTrace(ex);
+			writer.write("HTTP/1.0 200 ServerError\r\n");
+			writer.write("Content-Type: text/plain\r\n");
+			writer.write("\r\n");
+			writer.write("! ERROR CAUGHT !\r\n\r\n");
+			writer.write(trace);
 			writer.close();
 			reader.close();
 		} finally {

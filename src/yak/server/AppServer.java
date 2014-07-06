@@ -101,9 +101,11 @@ public class AppServer extends BaseServer {
 					throw new Exception("bad Verb: " + verb);
 				}
 			} catch (Exception e) {
+				String trace = GetStackTrace(e);
 				e.printStackTrace();
-				response = new Response("!\r\nERROR:\r\n" + e.getMessage(), 200,
+				response = new Response("!\r\nERROR:\r\n" + trace, 200,
 						"text/plain");
+				return;
 			}
 
 			z.addTag("hr", null);
@@ -112,6 +114,8 @@ public class AppServer extends BaseServer {
 		}
 		
 		private void addBreadcrumbs(Ht z, Request req) {
+			z.add(CRUMB);
+			z.add(CRUMB);
 			z.add(CRUMB);
 			z.add(makeAppLink("TOP", "Top"));
 
@@ -182,7 +186,7 @@ public class AppServer extends BaseServer {
 
 			Ht z = new Ht(Fmt("Saved Persona '%s'.", name));
 			z.addTag("p", null);
-			z.add(makeAppLink("TOP", "Top"));
+			z.add(makeAppLink("View Persona: " + name, "Persona", "persona", name));
 			return z;
 		}
 
@@ -203,6 +207,8 @@ public class AppServer extends BaseServer {
 			Ht z = new Ht();
 			z.add("Using your persona: " + persona.name);
 			z.addTag("ul", null, choices);
+			z.addTag("hr", null);
+			z.add("Persona Protobuf: %s", persona).addTag("hr", null);
 
 			return z;
 		}
@@ -231,8 +237,7 @@ public class AppServer extends BaseServer {
 		private void postTextToFriendChannel(Proto.Friend f, String message) throws IOException {
 			Proto.TextMessage msg = new Proto.TextMessage();
 			msg.text = Fmt("(From %s) %s", persona.name, message);
-			Bytes b = new Bytes();
-			Proto.PickleMessage(msg, b);
+			Bytes b = msg.pickle();
 
 			String chanId = friendChannelId(f);
 			Hash chanKey = friendChannelKey(f);
@@ -310,23 +315,28 @@ public class AppServer extends BaseServer {
 				Bytes b = HexDecodeIgnoringJunk(raw);
 				log.log(2, "Encrypted=%s", HexEncode(b));
 				Bytes plain = chanKey.decryptBytes(b);
-				log.log(2, "Plain=%s", HexEncode(plain));
+				String plain_hex = HexEncode(plain);
+				log.log(2, "Plain=%s", plain_hex);
 				Proto pb = Proto.Unpickle(plain);
 
 				long millis = Long.parseLong(t);
 				Date date = new Date(millis);
 				
-				String display = Fmt("[%s] %s [%s]: ", pb.getClass().getName());
-				switch (pb.ClassId()) {
+				String display = Fmt("[%s] %s [%s=%d]: ", millis, date, pb.getClass().getName(), pb.classId());
+				switch (pb.classId()) {
 				case Proto.IdTextMessage: {
 					Proto.TextMessage tm = (Proto.TextMessage) pb;
 					display += Fmt("(%d) %s", tm.direction, tm.text);
 				}
+				break;
 				case Proto.IdAutoMessage: {
 					Proto.AutoMessage tm = (Proto.AutoMessage) pb;
 					display += Fmt("(%d) [kind=%d] %s", tm.direction, tm.kind, tm.text);
 				}
+				break;
 				}
+				display += " ---- " + pb;
+				display += " ---- " + plain_hex;
 
 				items.addTag("li", null, display);
 			}
@@ -362,8 +372,7 @@ public class AppServer extends BaseServer {
 			Proto.DhRequest myDhR = new Proto.DhRequest();
 			myDhR.name = persona.name;
 			myDhR.dhpub = persona.dhpub;
-			Bytes myBytes = new Bytes();
-			Proto.PickleDhRequest(myDhR, myBytes);
+			Bytes myBytes = myDhR.pickle();
 			String mine = DecentlyEncode(myBytes);
 
 			String received = UseStore("Rendez", "me", q.get("me"), "you", q.get("you"), "v", mine);
@@ -378,7 +387,7 @@ public class AppServer extends BaseServer {
 				// TODO: handle ambiguous names.
 				throw Bad("Already have a friend named %s", theirDhR.name);
 			}
-			DH theirDH = new DH(theirDhR.name);
+			DH theirDH = new DH(theirDhR.dhpub);
 			DH mutualDH = mySec.mutualKey(theirDH);
 			String check = new Hash(mutualDH.toString()).asShortString();
 
@@ -394,6 +403,11 @@ public class AppServer extends BaseServer {
 			Ht.tag(inputs, "input", strings("type", "submit", "name", "submit", "value", "Confirm " + check));
 
 			z.addTag("form", strings("method", "GET", "action", action()), inputs);
+			z.addTag("hr", null);
+			z.add("My DH PUB: %s", myDhR.dhpub).addTag("br", null);
+			z.add("Their DH PUB: %s", theirDhR.name).addTag("br", null);
+			z.add("Mutual DH: %s", mutualDH).addTag("br", null);
+			z.add("My Persona: %s", persona).addTag("br", null);
 			return z;
 		}
 
@@ -424,8 +438,7 @@ public class AppServer extends BaseServer {
 			return page;
 		}
 		private void savePersona() {
-			Bytes b = new Bytes();
-			Proto.PicklePersona(persona, b);
+			Bytes b = persona.pickle();
 			try {
 				DataOutputStream dos = fileIO.openDataFileOutput(Fmt("%s.ppb", persona.name));
 				dos.write(b.arr, b.off, b.len);

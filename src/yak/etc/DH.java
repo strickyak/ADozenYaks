@@ -10,8 +10,8 @@ public class DH extends Yak {
 	public static final int RADIX = 36;
 	public BigInteger big;
 	
-	public DH(String hex) {
-		this(new BigInteger(hex, 36));
+	public DH(String base36) {
+		this(new BigInteger(base36, RADIX));
 	}
 	
 	public DH(BigInteger big) {
@@ -69,6 +69,6 @@ public class DH extends Yak {
 	
 	@Override
 	public String toString() {
-		return big.toString(36);
+		return big.toString(RADIX);
 	}
 }

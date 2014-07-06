@@ -656,19 +656,28 @@ public abstract class Yak {
 	}
 	
 	public static abstract class FileIO {
+		public String root;
+		public FileIO(String root) {
+			this.root = root;
+		}
+		public String path(String tail) { return root + "/" + tail; }
 		public abstract BufferedReader openTextFileInput(String filename) throws FileNotFoundException;
 		public abstract PrintWriter openTextFileOutput(String filename, boolean worldly) throws IOException;
 		public abstract DataInputStream openDataFileInput(String filename) throws FileNotFoundException;
 		public abstract DataOutputStream openDataFileOutput(String filename) throws FileNotFoundException;
 		
 		public String[] listFiles() {
-			File dot = new File(".");
-			return dot.list();
+			File r = new File(root);
+			String[] z = r.list();
+			if (z == null) {
+				z = new String[0];
+			}
+			return z;
 		}
 
 		public String readTextFile(String filename) {
 			try {
-				BufferedReader br = openTextFileInput(filename);
+				BufferedReader br = openTextFileInput(path(filename));
 				StringBuilder sb = new StringBuilder();
 				while (true) {
 					String line = br.readLine();
@@ -679,13 +688,13 @@ public abstract class Yak {
 				br.close();
 				return sb.toString();
 			} catch (IOException e) {
-				throw new RuntimeException("Cannot readFile: " + filename, e);
+				throw new RuntimeException("Cannot readFile: " + path(filename), e);
 			}
 		}
 
 		public void writeTextFile(String filename, String content, boolean worldly) {
 			try {
-				PrintWriter pw = openTextFileOutput(filename, worldly);
+				PrintWriter pw = openTextFileOutput(path(filename), worldly);
 				pw.print(content);
 				pw.flush();
 				pw.close();
@@ -693,7 +702,7 @@ public abstract class Yak {
 					throw new IOException("checkError is true");
 				}
 			} catch (IOException e) {
-				throw new RuntimeException("Cannot writeFile: " + filename, e);
+				throw new RuntimeException("Cannot writeFile: " + path(filename), e);
 			}
 		}
 		
@@ -703,25 +712,28 @@ public abstract class Yak {
 	}
 	
 	public static class JavaFileIO extends FileIO {
+		public JavaFileIO(String root) {
+			super(root);
+		}
 
 		@Override
 		public BufferedReader openTextFileInput(String filename) throws FileNotFoundException {
-			return new BufferedReader(new FileReader(new File(filename)));
+			return new BufferedReader(new FileReader(new File(path(filename))));
 		}
 
 		@Override
 		public PrintWriter openTextFileOutput(String filename, boolean worldly) throws IOException {
-			return new PrintWriter(new BufferedWriter(new FileWriter(filename)));
+			return new PrintWriter(new BufferedWriter(new FileWriter(path(filename))));
 		}
 
 		@Override
 		public DataInputStream openDataFileInput(String filename) throws FileNotFoundException {
-			return new DataInputStream(new FileInputStream(filename));
+			return new DataInputStream(new FileInputStream(path(filename)));
 		}
 
 		@Override
 		public DataOutputStream openDataFileOutput(String filename) throws FileNotFoundException {
-			return new DataOutputStream(new FileOutputStream(filename));
+			return new DataOutputStream(new FileOutputStream(path(filename)));
 		}
 	}
 }

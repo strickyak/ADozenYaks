@@ -2,6 +2,7 @@ package yak.server;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +39,29 @@ public class AppServer extends BaseServer {
 		log.log(2, "Hello, this is AppServer on port=%d with magic=%s", DEFAULT_PORT, appMagicWord);
 		log.log(2, "Constructed storagePath=%s", storagePath);
 	}
+	
+	public static void main(String[] args) {
+		try {
+			String magic = "magic";
+			Logger logger = new Logger();
+			new Thread(new StoreServer(StoreServer.DEFAULT_PORT, magic, logger)).start();
+
+			for (int p = 2000; p < 2005; p++) {
+				String dir = Fmt("port_%d", p);
+				new File(dir).mkdirs();
+				AppServer server = new AppServer(
+						p, magic,
+						Fmt("http://localhost:%d/%s", StoreServer.DEFAULT_PORT, magic),
+						new JavaFileIO(dir), new Logger(), new Progresser());
+				new Thread(server).start();
+			}
+		} catch (Exception e) {
+			System.err.println("CAUGHT: " + e);
+			e.printStackTrace();
+		}
+	}
+
+
 
 	private String action() {
 		return "/" + appMagicWord;
@@ -97,10 +121,10 @@ public class AppServer extends BaseServer {
 					z = doVerbRendez2(req.query);
 				} else if (verb.equals("Rendez3")) {
 					z = doVerbRendez3(req.query);
-//				} else if (verb.equals("MakeRoomForm")) {
-//					z = doVerbMakeRoomForm(req.query);
-//				} else if (verb.equals("MakeRoom")) {
-//					z = doVerbMakeRoom(req.query);
+				} else if (verb.equals("MakeRoomForm")) {
+					z = doVerbMakeRoomForm(req.query);
+				} else if (verb.equals("MakeRoom")) {
+					z = doVerbMakeRoom(req.query);
 				} else {
 					throw new Exception("bad Verb: " + verb);
 				}
@@ -304,6 +328,29 @@ public class AppServer extends BaseServer {
 		}
 		
 		// doVerbMakeRoomForm
+		private Ht doVerbMakeRoomForm(HashMap<String,String> q) throws IOException {
+			Ht formGuts = new Ht();
+			formGuts.add("Create a new room named: ");
+			formGuts.addTag("input", strings("width", "10", "name", "rname"));
+			formGuts.addTag("input", strings("type", "submit"));
+			return Ht.tag(formGuts, "p", null);
+		}
+		
+		// doVerbMakeRoomForm
+		private Ht doVerbMakeRoom(HashMap<String,String> q) throws IOException {
+			String rname = q.get("rname");
+			if (!(IsAlphaNum(rname))) {
+				Bad("Room name must be alphanumeric: '%s'", CurlyEncode(rname));
+			}
+			Proto.Room old = findRoom(persona.name, rname);
+			if (old != null) {
+				Bad("There is already a room named %s.", rname);
+			}
+			Proto.Room r = new Proto.Room();
+			persona.room.add(r);
+			return new Ht("Added room: ", rname);
+			// TODO: view room.
+		}
 		
 		private Ht listChannel(String title, String channel, Hash chanKey) throws IOException {
 			String[] tnodes = UseStore("List", "c", channel).split("\n");

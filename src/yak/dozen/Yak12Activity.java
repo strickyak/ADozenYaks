@@ -409,6 +409,10 @@ public class Yak12Activity extends Activity {
 	}
 	
 	class AndroidFileIO extends FileIO {
+		
+		public AndroidFileIO() {
+			super(".");
+		}
 
 		public String[] listFiles() {
 			return Yak12Activity.this.fileList();

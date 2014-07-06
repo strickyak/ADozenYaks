@@ -18,7 +18,7 @@ public class DH extends Yak {
 		this.big = big;
 		DataInputStream urandom = null;
 		try {
-			urandom = new JavaFileIO().openURandom();
+			urandom = new JavaFileIO(".").openURandom();
 			byte[] seed = new byte[256];
 			urandom.read(seed);
 			Rand.setSeed(seed);

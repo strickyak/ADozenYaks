@@ -72,9 +72,10 @@ public abstract class Proto extends Yak {
   }
 
   public static class Room extends Proto {  // = 49
-    ArrayList<String> member = new ArrayList<String>();  // = 3
+    ArrayList<String> member = new ArrayList<String>();  // = 4
     String name;  // = 1
-    String title;  // = 2
+    String owner;  // = 2
+    String title;  // = 3
     public int ClassId() { return 49; }
   }
 
@@ -192,9 +193,10 @@ public abstract class Proto extends Yak {
   public static void PickleRoom (Room p, Bytes b) {  // = 49
     b.appendProtoInt (0, 49);  // Class Id 49
     if (p.name != null) b.appendProtoString (1, p.name);
-    if (p.title != null) b.appendProtoString (2, p.title);
+    if (p.owner != null) b.appendProtoString (2, p.owner);
+    if (p.title != null) b.appendProtoString (3, p.title);
       for (int i = 0; i < p.member.size(); i++) {
-        b.appendProtoString (3, p.member.get(i));
+        b.appendProtoString (4, p.member.get(i));
       } // next i
   }
 
@@ -439,11 +441,13 @@ public static Room UnpickleRoom (Bytes b) {  // = 49
     int code = b.popVarInt();
     System.err.println(Fmt("Code %d:%d", code >> 3, code & 7));
     switch (code) {
-      case (3 << 3) | 2: { z.member.add(b.popVarString()); }
+      case (4 << 3) | 2: { z.member.add(b.popVarString()); }
         break;
       case (1 << 3) | 2: { z.name = b.popVarString(); }
         break;
-      case (2 << 3) | 2: { z.title = b.popVarString(); }
+      case (2 << 3) | 2: { z.owner = b.popVarString(); }
+        break;
+      case (3 << 3) | 2: { z.title = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 49) { throw new RuntimeException("Bad clsid: " + clsid); }}
       default:

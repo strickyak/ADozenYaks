@@ -1,8 +1,11 @@
+# These are filed out for a Persona file.
 define Room = 49
   String name = 1
-  String title = 2
-  repeated String member = 3
+  String owner = 2
+  String title = 3
+  repeated String member = 4
 
+# Also used in membership lists.
 define Member = 50
   String name = 1
   String hash = 2
@@ -20,24 +23,36 @@ define Persona extends Friend = 52
   String dhsec = 11
   repeated Friend friend = 12
 
+
+# This is used in Peering by the Rendezvous Server.
 define DhRequest = 53
   String name = 1
   String dhpub = 2
 
+
+# These are used for communicating via the Storage Server.
+# Message is the base class.
 define Message = 54
   int direction = 1
   String room_name = 2   # Empty if no room
   String room_owner = 3  # Empty if no room
 
+# A regular text message, for humans to read.
 define TextMessage extends Message = 55
   String text = 12
 
+# Room owner sends this to everyone, to update membership.
+# Use inherited room_name & room_owner.
 define MembersOfRoom extends Message = 56
   repeated Member members = 13
 
+# Room owner can invite someone new.
+# Use inherited room_name & room_owner.
 define InviteToRoom extends Message = 57
   repeated String member_names = 14
 
+# Someone can accept an invitation from a room owner.
+# Use inherited room_name & room_owner.
 define AcceptToRoom extends Message = 58
 
 

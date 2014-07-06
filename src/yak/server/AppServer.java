@@ -97,6 +97,10 @@ public class AppServer extends BaseServer {
 					z = doVerbRendez2(req.query);
 				} else if (verb.equals("Rendez3")) {
 					z = doVerbRendez3(req.query);
+//				} else if (verb.equals("MakeRoomForm")) {
+//					z = doVerbMakeRoomForm(req.query);
+//				} else if (verb.equals("MakeRoom")) {
+//					z = doVerbMakeRoom(req.query);
 				} else {
 					throw new Exception("bad Verb: " + verb);
 				}
@@ -193,6 +197,7 @@ public class AppServer extends BaseServer {
 		private Ht doVerbPersona(HashMap<String, String> q) {
 			Ht choices = new Ht();
 			choices.addTag("li", null, makeAppLink("Add a friend (Peering Ceremony)", "Rendez"));
+			choices.addTag("li", null, makeAppLink("Make a new Room", "MakeRoomForm"));
 
 			for (Proto.Room r : persona.room) {
 				choices.addTag("li", null, makeAppLink("Your room: " + r.name, "ViewRoom", "rname", r.name + "@" + persona.name));
@@ -297,6 +302,8 @@ public class AppServer extends BaseServer {
 			page.addTag("form", strings("method", "POST", "action", action()), formGuts);
 			return page;
 		}
+		
+		// doVerbMakeRoomForm
 		
 		private Ht listChannel(String title, String channel, Hash chanKey) throws IOException {
 			String[] tnodes = UseStore("List", "c", channel).split("\n");
@@ -437,6 +444,7 @@ public class AppServer extends BaseServer {
 			page.add(makeAppLink("Top", "Top"));
 			return page;
 		}
+		
 		private void savePersona() {
 			Bytes b = persona.pickle();
 			try {

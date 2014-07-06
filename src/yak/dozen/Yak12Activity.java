@@ -278,7 +278,7 @@ public class Yak12Activity extends Activity {
 			// this.setWebChromeClient(new WebChromeClient());
 			this.getSettings().setBuiltInZoomControls(true);
 			// this.getSettings().setJavaScriptEnabled(true);
-			this.getSettings().setDefaultFontSize(18);
+			this.getSettings().setDefaultFontSize(20);  // was 18.
 			this.getSettings().setNeedInitialFocus(true);
 			this.getSettings().setSupportZoom(true);
 			this.getSettings().setSaveFormData(true);

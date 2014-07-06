@@ -186,6 +186,7 @@ foreach cls [lsort [array names Classes]] {
 	puts "        break;"
   } ;# end foreach f
   puts "      case 0:  {int clsid = b.popVarInt(); if (clsid != $Classes($cls)) { throw new RuntimeException(\"Bad clsid: \" + clsid); }}"
+  puts "        break;"
   puts "      default:"
   puts "        // Some day, ignore extra fields.  For now, call it an error."
   puts "        throw new RuntimeException(\"Bad tag code in $cls: \" + code); "
@@ -197,7 +198,7 @@ foreach cls [lsort [array names Classes]] {
   puts ""
 }
 
-puts "  public final Proto Unpickle(Bytes b) {"
+puts "  public static Proto Unpickle(Bytes b) {"
 puts "    if (b.arr\[b.off] == 0) {"
 puts "      int clsid = b.arr\[b.off + 1];  // HACK works for clsid < 128"
 puts "      switch (clsid) {"

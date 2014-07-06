@@ -225,7 +225,7 @@ public class AppServer extends BaseServer {
 		}
 
 		private void postTextToFriendChannel(Proto.Friend f, String message) throws IOException {
-			Proto.Message msg = new Proto.Message();
+			Proto.TextMessage msg = new Proto.TextMessage();
 			msg.text = Fmt("(From %s) %s", persona.name, message);
 			Bytes b = new Bytes();
 			Proto.PickleMessage(msg, b);
@@ -307,12 +307,24 @@ public class AppServer extends BaseServer {
 				log.log(2, "Encrypted=%s", HexEncode(b));
 				Bytes plain = chanKey.decryptBytes(b);
 				log.log(2, "Plain=%s", HexEncode(plain));
-				Proto.Message msg = Proto.UnpickleMessage(plain);
+				Proto pb = Proto.Unpickle(plain);
 
 				long millis = Long.parseLong(t);
 				Date date = new Date(millis);
+				
+				String display = Fmt("[%s] %s [%s]: ", pb.getClass().getName());
+				switch (pb.ClassId()) {
+				case Proto.IdTextMessage: {
+					Proto.TextMessage tm = (Proto.TextMessage) pb;
+					display += Fmt("(%d) %s", tm.direction, tm.text);
+				}
+				case Proto.IdAutoMessage: {
+					Proto.AutoMessage tm = (Proto.AutoMessage) pb;
+					display += Fmt("(%d) [kind=%d] %s", tm.direction, tm.kind, tm.text);
+				}
+				}
 
-				items.addTag("li", null, Fmt("%s = %s: %s", t, date, msg.text));
+				items.addTag("li", null, display);
 			}
 
 			Ht page = new Ht();
@@ -348,13 +360,14 @@ public class AppServer extends BaseServer {
 			myDhR.dhpub = persona.dhpub;
 			Bytes myBytes = new Bytes();
 			Proto.PickleDhRequest(myDhR, myBytes);
-			String mine = BytesToString(myBytes);
+			String mine = DecentlyEncode(myBytes);
 
 			String received = UseStore("Rendez", "me", q.get("me"), "you", q.get("you"), "v", mine);
 			if (received==null || received.length()==0 || received.charAt(0)=='!') {
 				return new Ht("Peering failed.  Go back and try again.");
 			}
-			Proto.DhRequest theirDhR = Proto.UnpickleDhRequest(new Bytes(received));
+			
+			Proto.DhRequest theirDhR = Proto.UnpickleDhRequest(DecentlyDecode(received));
 			
 			Proto.Friend oldFriend = findFriend(theirDhR.name);
 			if (oldFriend != null) {

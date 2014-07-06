@@ -76,8 +76,8 @@ public abstract class Yak {
 		for (int i = 0; i < n; i++) {
 			char c = a.charAt(i);
 			byte b = (byte) c;
-			if (b != c) {
-				throw Bad("Bad char in ToBytes(): %d", c);
+			if ((255 & (int)b) != c) {
+				throw Bad("Bad char in ToBytes(): %d", (int)c);
 			}
 			bytes[i] = b;
 		}
@@ -171,6 +171,43 @@ public abstract class Yak {
 			}
 		}
 		return sb.toString();
+	}
+	
+	public static String DecentlyEncode(Bytes bytes) {
+		StringBuilder sb = new StringBuilder("Y");
+		final int n = bytes.len;
+		for (int i = 0; i < n; i++) {
+			char c = (char) bytes.arr[bytes.off+i];
+			if ('0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z') {
+				sb.append(c);
+			} else {
+				sb.append('_');
+				sb.append(HexChars[(c>>4) & 15]);
+				sb.append(HexChars[c & 15]);
+			}
+		}
+		sb.append('Z');
+		return sb.toString();
+	}
+	
+	public static Bytes DecentlyDecode(String s) {
+		final int n = s.length();
+		Bytes bytes = new Bytes(0, n);  // n is an initial capacity guess.
+		if (s.charAt(0) != 'Y' || s.charAt(n-1) != 'Z') {
+			Bad("DecentlyDecode: bad magic %d, %d", (int)s.charAt(0), (int)s.charAt(n-1));
+		}
+		for (int i = 1; i < n-1; i++) {
+			char c = s.charAt(i);
+			byte b;
+			if (c == '_') {
+				b = (byte) ((ValueOfHexChar(s.charAt(i+1)) << 4) |  ValueOfHexChar(s.charAt(i+2)));
+				i += 2;
+			} else {
+				b = (byte) c;
+			}
+			bytes.appendByte(b);
+		}
+		return bytes;
 	}
 
 	public static char[] HexChars = { '0', '1', '2', '3', '4', '5', '6', '7',

@@ -39,17 +39,21 @@ define Message = 54
 
 # A regular text message, for humans to read.
 define TextMessage extends Message = 55
-  String text = 12
+  String text = 4
+
+# An automated text message, by robot, for humans to read.
+define AutoMessage extends TextMessage = 61
+  int kind = 5
 
 # Room owner sends this to everyone, to update membership.
 # Use inherited room_name & room_owner.
 define MembersOfRoom extends Message = 56
-  repeated Member members = 13
+  repeated Member members = 4
 
 # Room owner can invite someone new.
 # Use inherited room_name & room_owner.
 define InviteToRoom extends Message = 57
-  repeated String member_names = 14
+  repeated String member_names = 4
 
 # Someone can accept an invitation from a room owner.
 # Use inherited room_name & room_owner.

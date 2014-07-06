@@ -11,6 +11,7 @@ public abstract class Proto extends Yak {
   public abstract int ClassId();
 
   public static final int IdAcceptToRoom = 58;
+  public static final int IdAutoMessage = 61;
   public static final int IdDhRequest = 53;
   public static final int IdFriend = 51;
   public static final int IdInviteToRoom = 57;
@@ -23,6 +24,11 @@ public abstract class Proto extends Yak {
 
   public static class AcceptToRoom extends Message {  // = 58
     public int ClassId() { return 58; }
+  }
+
+  public static class AutoMessage extends TextMessage {  // = 61
+    int kind;  // = 5
+    public int ClassId() { return 61; }
   }
 
   public static class DhRequest extends Proto {  // = 53
@@ -39,7 +45,7 @@ public abstract class Proto extends Yak {
   }
 
   public static class InviteToRoom extends Message {  // = 57
-    ArrayList<String> member_names = new ArrayList<String>();  // = 14
+    ArrayList<String> member_names = new ArrayList<String>();  // = 4
     public int ClassId() { return 57; }
   }
 
@@ -54,7 +60,7 @@ public abstract class Proto extends Yak {
   }
 
   public static class MembersOfRoom extends Message {  // = 56
-    ArrayList<Member> members = new ArrayList<Member>();  // = 13
+    ArrayList<Member> members = new ArrayList<Member>();  // = 4
     public int ClassId() { return 56; }
   }
 
@@ -80,7 +86,7 @@ public abstract class Proto extends Yak {
   }
 
   public static class TextMessage extends Message {  // = 55
-    String text;  // = 12
+    String text;  // = 4
     public int ClassId() { return 55; }
   }
 
@@ -89,6 +95,13 @@ public abstract class Proto extends Yak {
     b.appendProtoInt (1, p.direction);
     if (p.room_name != null) b.appendProtoString (2, p.room_name);
     if (p.room_owner != null) b.appendProtoString (3, p.room_owner);
+  }
+
+
+  public static void PickleAutoMessage (AutoMessage p, Bytes b) {  // = 61
+    b.appendProtoInt (0, 61);  // Class Id 61
+    if (p.text != null) b.appendProtoString (4, p.text);
+    b.appendProtoInt (5, p.kind);
   }
 
 
@@ -127,7 +140,7 @@ public abstract class Proto extends Yak {
     if (p.room_name != null) b.appendProtoString (2, p.room_name);
     if (p.room_owner != null) b.appendProtoString (3, p.room_owner);
       for (int i = 0; i < p.member_names.size(); i++) {
-        b.appendProtoString (14, p.member_names.get(i));
+        b.appendProtoString (4, p.member_names.get(i));
       } // next i
   }
 
@@ -154,7 +167,7 @@ public abstract class Proto extends Yak {
         if (p.members.get(i) != null) {
           Bytes b2 = new Bytes();
           PickleMember (p.members.get(i), b2);
-	      b.appendProtoBytes (13, b2);
+	      b.appendProtoBytes (4, b2);
         }
       } // next i
   }
@@ -206,7 +219,7 @@ public abstract class Proto extends Yak {
     b.appendProtoInt (1, p.direction);
     if (p.room_name != null) b.appendProtoString (2, p.room_name);
     if (p.room_owner != null) b.appendProtoString (3, p.room_owner);
-    if (p.text != null) b.appendProtoString (12, p.text);
+    if (p.text != null) b.appendProtoString (4, p.text);
   }
 
 
@@ -224,6 +237,7 @@ public static AcceptToRoom UnpickleAcceptToRoom (Bytes b) {  // = 58
       case (3 << 3) | 2: { z.room_owner = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 58) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in AcceptToRoom: " + code); 
@@ -231,6 +245,28 @@ public static AcceptToRoom UnpickleAcceptToRoom (Bytes b) {  // = 58
   }  // end while
   return z;
 }  // end Unpickle AcceptToRoom
+
+
+public static AutoMessage UnpickleAutoMessage (Bytes b) {  // = 61
+  System.err.printf("UnpickleAutoMessage: %s\n", b.showProto());
+  AutoMessage z = new AutoMessage ();
+  while (b.len > 0) {
+    int code = b.popVarInt();
+    System.err.println(Fmt("Code %d:%d", code >> 3, code & 7));
+    switch (code) {
+      case (5 << 3) | 0: { z.kind = b.popVarInt(); }
+        break;
+      case (4 << 3) | 2: { z.text = b.popVarString(); }
+        break;
+      case 0:  {int clsid = b.popVarInt(); if (clsid != 61) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
+      default:
+        // Some day, ignore extra fields.  For now, call it an error.
+        throw new RuntimeException("Bad tag code in AutoMessage: " + code); 
+    }  // end switch
+  }  // end while
+  return z;
+}  // end Unpickle AutoMessage
 
 
 public static DhRequest UnpickleDhRequest (Bytes b) {  // = 53
@@ -245,6 +281,7 @@ public static DhRequest UnpickleDhRequest (Bytes b) {  // = 53
       case (1 << 3) | 2: { z.name = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 53) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in DhRequest: " + code); 
@@ -284,6 +321,7 @@ public static Friend UnpickleFriend (Bytes b) {  // = 51
       } // end case
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 51) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in Friend: " + code); 
@@ -302,13 +340,14 @@ public static InviteToRoom UnpickleInviteToRoom (Bytes b) {  // = 57
     switch (code) {
       case (1 << 3) | 0: { z.direction = b.popVarInt(); }
         break;
-      case (14 << 3) | 2: { z.member_names.add(b.popVarString()); }
+      case (4 << 3) | 2: { z.member_names.add(b.popVarString()); }
         break;
       case (2 << 3) | 2: { z.room_name = b.popVarString(); }
         break;
       case (3 << 3) | 2: { z.room_owner = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 57) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in InviteToRoom: " + code); 
@@ -338,6 +377,7 @@ public static Member UnpickleMember (Bytes b) {  // = 50
       case (1 << 3) | 2: { z.name = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 50) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in Member: " + code); 
@@ -356,7 +396,7 @@ public static MembersOfRoom UnpickleMembersOfRoom (Bytes b) {  // = 56
     switch (code) {
       case (1 << 3) | 0: { z.direction = b.popVarInt(); }
         break;
-      case (13 << 3) | 2: {
+      case (4 << 3) | 2: {
          Bytes b2 = b.popVarBytes();
          Member p2 = UnpickleMember (b2);
          z.members.add(p2);
@@ -367,6 +407,7 @@ public static MembersOfRoom UnpickleMembersOfRoom (Bytes b) {  // = 56
       case (3 << 3) | 2: { z.room_owner = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 56) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in MembersOfRoom: " + code); 
@@ -390,6 +431,7 @@ public static Message UnpickleMessage (Bytes b) {  // = 54
       case (3 << 3) | 2: { z.room_owner = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 54) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in Message: " + code); 
@@ -425,6 +467,7 @@ public static Persona UnpicklePersona (Bytes b) {  // = 52
       } // end case
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 52) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in Persona: " + code); 
@@ -450,6 +493,7 @@ public static Room UnpickleRoom (Bytes b) {  // = 49
       case (3 << 3) | 2: { z.title = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 49) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in Room: " + code); 
@@ -472,9 +516,10 @@ public static TextMessage UnpickleTextMessage (Bytes b) {  // = 55
         break;
       case (3 << 3) | 2: { z.room_owner = b.popVarString(); }
         break;
-      case (12 << 3) | 2: { z.text = b.popVarString(); }
+      case (4 << 3) | 2: { z.text = b.popVarString(); }
         break;
       case 0:  {int clsid = b.popVarInt(); if (clsid != 55) { throw new RuntimeException("Bad clsid: " + clsid); }}
+        break;
       default:
         // Some day, ignore extra fields.  For now, call it an error.
         throw new RuntimeException("Bad tag code in TextMessage: " + code); 
@@ -484,11 +529,12 @@ public static TextMessage UnpickleTextMessage (Bytes b) {  // = 55
 }  // end Unpickle TextMessage
 
 
-  public final Proto Unpickle(Bytes b) {
+  public static Proto Unpickle(Bytes b) {
     if (b.arr[b.off] == 0) {
       int clsid = b.arr[b.off + 1];  // HACK works for clsid < 128
       switch (clsid) {
         case 58 : return UnpickleAcceptToRoom (b);
+        case 61 : return UnpickleAutoMessage (b);
         case 53 : return UnpickleDhRequest (b);
         case 51 : return UnpickleFriend (b);
         case 57 : return UnpickleInviteToRoom (b);

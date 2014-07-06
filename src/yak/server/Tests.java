@@ -8,6 +8,16 @@ import yak.server.Proto.Room;
 
 public class Tests extends Yak {
 	
+	public void testDecentlyEncode() {
+		String junk = "\000\001\002\n\rFoo+-*/=Bar\201\301\376\377";
+		Bytes bytes = new Bytes(StringToBytes(junk));
+		String enc = DecentlyEncode(bytes);
+		Bytes dec = DecentlyDecode(enc);
+		assertEquals(CurlyEncode(junk), CurlyEncode(BytesToString(dec)));
+		assertEquals(true, IsDecent(enc));
+		System.err.println(enc);
+	}
+	
 	public void testVarInt() {
 		Bytes b = new Bytes();
 		b.appendProtoInt(1, 100);
@@ -15,7 +25,7 @@ public class Tests extends Yak {
 		b.appendProtoInt(3, 1000000);
 		b.appendProtoInt(4, -10);
 		b.appendProtoInt(5, -1000000);
-		System.err.print(b.showProto());
+		System.err.println(b.showProto());
 		
 		assertEquals(1 << 3, b.popVarInt());
 		assertEquals(b.popVarInt(), 100);
@@ -92,6 +102,7 @@ public class Tests extends Yak {
 		new Tests().testFriend();
 		new Tests().testEncrypt();
 		new Tests().testVarInt();
+		new Tests().testDecentlyEncode();
 	}
 }
 

@@ -49,8 +49,10 @@ public class AppServer extends BaseServer {
 	
 	class Handlers {
 		Response response;
+		Request req;
 
 		public Handlers(Request req) {
+			this.req = req;
 			log.log(2, "Req %s", req);
 			log.log(2, "AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
 
@@ -129,8 +131,9 @@ public class AppServer extends BaseServer {
 		private Ht doTop() {
 			log.log(1, "LISTING FILES");
 			String[] files = fileIO.listFiles();
-			Pattern p = Pattern.compile("dozen_([a-z][a-z0-9]*)\\.pb");
+			Pattern p = Pattern.compile("([a-z][a-z0-9]*)\\.[Pp][Pp][Bb]");
 			ArrayList<String> personaList = new ArrayList<String>();
+			
 			for (String f : files) {
 				log.log(2, "File: %s", f);
 				Matcher m = p.matcher(f);
@@ -139,6 +142,7 @@ public class AppServer extends BaseServer {
 					personaList.add(m.group(1));
 				}
 			}
+			
 			// Convert to array personae, and sort.
 			String[] personae = new String[personaList.size()];
 			personaList.toArray(personae);
@@ -423,7 +427,7 @@ public class AppServer extends BaseServer {
 			Bytes b = new Bytes();
 			Proto.PicklePersona(persona, b);
 			try {
-				DataOutputStream dos = fileIO.openDataFileOutput(Fmt("dozen_%s.pb", persona.name));
+				DataOutputStream dos = fileIO.openDataFileOutput(Fmt("%s.ppb", persona.name));
 				dos.write(b.arr, b.off, b.len);
 				dos.close();
 			} catch (IOException e) {
@@ -433,7 +437,7 @@ public class AppServer extends BaseServer {
 		}
 		private void loadPersona(String name) {
 			try {
-				DataInputStream dis = fileIO.openDataFileInput(Fmt("dozen_%s.pb", name));
+				DataInputStream dis = fileIO.openDataFileInput(Fmt("%s.ppb", name));
 				int avail = dis.available();
 				byte[] b = new byte[avail];
 				dis.readFully(b);

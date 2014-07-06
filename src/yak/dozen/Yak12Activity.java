@@ -208,7 +208,7 @@ public class Yak12Activity extends Activity {
 		public void getUrlAndDisplay(final String url)
 				throws ClientProtocolException, IOException {
 			final AVerticalView vert = new AVerticalView();
-			ATextView tv = new ATextView("Running: " + url);
+			ATextView tv = new ATextView(url);
 			tv.setTextColor(Color.GRAY);
 			vert.addView(tv);
 			setContentView(vert);
@@ -321,7 +321,7 @@ public class Yak12Activity extends Activity {
 	public class ATextView extends TextView {
 		public ATextView(String text) {
 			super(yakContext);
-			log.log(1, "ATextView ===  CTOR: " + Yak.CurlyEncode(text));
+			// log.log(1, "ATextView ===  CTOR: " + Yak.CurlyEncode(text));
 			this.setText(text);
 			this.setBackgroundColor(Color.BLACK);
 			this.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);

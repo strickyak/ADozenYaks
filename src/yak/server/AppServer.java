@@ -40,7 +40,7 @@ public class AppServer extends BaseServer {
 		log.log(2, "Constructed storagePath=%s", storagePath);
 	}
 	
-	public static void main(String[] args) { //Lets the app be run locally in a debugging mode in the browser
+	public static void main(String[] args) {
 		try {
 			String magic = "magic";
 			Logger logger = new Logger();
@@ -64,19 +64,18 @@ public class AppServer extends BaseServer {
 
 
 	private String action() {
-		return "/" + appMagicWord; // during debugging mode, the magic word is "magic"
-		// in actual use, the magic word will be something long and insanely unguessable
+		return "/" + appMagicWord;
 	}
 
 	public Response handleRequest(Request req) {
-		return new Handlers(req).response; // making the constructor do all the work (lazy programming!)
+		return new Handlers(req).response;
 	}
 	
 	class Handlers {
 		Response response;
 		Request req;
 
-		public Handlers(Request req) { 
+		public Handlers(Request req) {
 			this.req = req;
 			log.log(2, "Req %s", req);
 			log.log(2, "AppServer handleRequest path= %s query= %s", Show(req.path), Show(req.query));
@@ -89,7 +88,7 @@ public class AppServer extends BaseServer {
 				throw Bad("Bad Magic Word: %s", Show(req.path));
 			}
 
-			String verb = req.query.get("verb"); // switch statement?
+			String verb = req.query.get("verb");
 
 			// Strange hack.  Is it used?  Unbundle the query "query" and add its parts.
 			String query = req.query.get("query");
@@ -122,8 +121,8 @@ public class AppServer extends BaseServer {
 					z = doVerbRendez2(req.query);
 				} else if (verb.equals("Rendez3")) {
 					z = doVerbRendez3(req.query);
-				} else if (verb.equals("MakeRoomForm")) { // returns the form for making a new room
-					z = doVerbMakeRoomForm(req.query);    // when submitted, should make a new room
+				} else if (verb.equals("MakeRoomForm")) {
+					z = doVerbMakeRoomForm(req.query);
 				} else if (verb.equals("MakeRoom")) {
 					z = doVerbMakeRoom(req.query);
 				} else {
@@ -334,12 +333,7 @@ public class AppServer extends BaseServer {
 			formGuts.add("Create a new room named: ");
 			formGuts.addTag("input", strings("width", "10", "name", "rname"));
 			formGuts.addTag("input", strings("type", "submit"));
-			formGuts.addTag("input", strings("type", "hidden", "name", "verb", "value", "MakeRoom"));
-			
-			Ht page = new Ht();
-			page.addTag("form", strings("method", "POST", "action", action()), formGuts);
-			
-			return Ht.tag(page, "p", null);
+			return Ht.tag(formGuts, "p", null);
 		}
 		
 		// doVerbMakeRoomForm

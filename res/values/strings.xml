@@ -7,5 +7,11 @@
     <string name="action_log">View Log</string>
     <string name="action_top">Goto Top</string>
     <string name="action_help">Help</string>
+    <string name="notification_title">my_notification_title</string>
+    <string name="remote_service_started">my_remote_service_started</string>
+    <string name="remote_service_label">my_remote_service_label</string>
+    <string name="remote_service_stopped">my_remote_service_stopped</string>
+    <string name="remote_service_connected">my_remote_service_connected</string>
+    <string name="remote_service_disconnected">my_emote_service_disconnected</string>
 
 </resources>
